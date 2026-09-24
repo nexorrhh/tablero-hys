@@ -119,6 +119,200 @@ export interface Database {
           }
         ];
       };
+      hys_sectores: {
+        Row: {
+          id: number;
+          nombre: string;
+          activo: boolean;
+        };
+        Insert: {
+          id?: number;
+          nombre: string;
+          activo?: boolean;
+        };
+        Update: {
+          id?: number;
+          nombre?: string;
+          activo?: boolean;
+        };
+        Relationships: [];
+      };
+      hys_factores_accidente: {
+        Row: {
+          id: number;
+          nombre: string;
+          activo: boolean;
+        };
+        Insert: {
+          id?: number;
+          nombre: string;
+          activo?: boolean;
+        };
+        Update: {
+          id?: number;
+          nombre?: string;
+          activo?: boolean;
+        };
+        Relationships: [];
+      };
+      hys_eventos: {
+        Row: {
+          id: string;
+          tipo: "accidente" | "incidente";
+          empleado_id: string | null;
+          sector_id: number | null;
+          factor_id: number | null;
+          fecha: string;
+          descripcion: string;
+          clasificacion: "ART" | "particular" | null;
+          in_itinere: boolean;
+          derivado_astrolaboral: boolean;
+          dias_perdidos: number;
+          informe_path: string | null;
+          creado_por: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          tipo: "accidente" | "incidente";
+          empleado_id?: string | null;
+          sector_id?: number | null;
+          factor_id?: number | null;
+          fecha: string;
+          descripcion: string;
+          clasificacion?: "ART" | "particular" | null;
+          in_itinere?: boolean;
+          derivado_astrolaboral?: boolean;
+          dias_perdidos?: number;
+          informe_path?: string | null;
+          creado_por?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          tipo?: "accidente" | "incidente";
+          empleado_id?: string | null;
+          sector_id?: number | null;
+          factor_id?: number | null;
+          fecha?: string;
+          descripcion?: string;
+          clasificacion?: "ART" | "particular" | null;
+          in_itinere?: boolean;
+          derivado_astrolaboral?: boolean;
+          dias_perdidos?: number;
+          informe_path?: string | null;
+          creado_por?: string | null;
+          created_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "hys_eventos_empleado_id_fkey";
+            columns: ["empleado_id"];
+            referencedRelation: "empleados";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "hys_eventos_sector_id_fkey";
+            columns: ["sector_id"];
+            referencedRelation: "hys_sectores";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "hys_eventos_factor_id_fkey";
+            columns: ["factor_id"];
+            referencedRelation: "hys_factores_accidente";
+            referencedColumns: ["id"];
+          }
+        ];
+      };
+      hys_eventos_seguimiento: {
+        Row: {
+          id: string;
+          evento_id: string | null;
+          investigacion_causa: string | null;
+          accion_mejora: string;
+          responsable_id: string | null;
+          fecha_compromiso: string | null;
+          fecha_cierre: string | null;
+          estado: "pendiente" | "en_curso" | "cerrada";
+          creado_por: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          evento_id?: string | null;
+          investigacion_causa?: string | null;
+          accion_mejora: string;
+          responsable_id?: string | null;
+          fecha_compromiso?: string | null;
+          fecha_cierre?: string | null;
+          estado?: "pendiente" | "en_curso" | "cerrada";
+          creado_por?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          evento_id?: string | null;
+          investigacion_causa?: string | null;
+          accion_mejora?: string;
+          responsable_id?: string | null;
+          fecha_compromiso?: string | null;
+          fecha_cierre?: string | null;
+          estado?: "pendiente" | "en_curso" | "cerrada";
+          creado_por?: string | null;
+          created_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "hys_eventos_seguimiento_evento_id_fkey";
+            columns: ["evento_id"];
+            referencedRelation: "hys_eventos";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "hys_eventos_seguimiento_responsable_id_fkey";
+            columns: ["responsable_id"];
+            referencedRelation: "empleados";
+            referencedColumns: ["id"];
+          }
+        ];
+      };
+      hys_historico_mensual: {
+        Row: {
+          id: string;
+          mes: number;
+          anio: number;
+          accidentes_art: number;
+          accidentes_particular: number;
+          accidentes_in_itinere: number;
+          incidentes: number;
+          dias_perdidos: number;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          mes: number;
+          anio: number;
+          accidentes_art?: number;
+          accidentes_particular?: number;
+          accidentes_in_itinere?: number;
+          incidentes?: number;
+          dias_perdidos?: number;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          mes?: number;
+          anio?: number;
+          accidentes_art?: number;
+          accidentes_particular?: number;
+          accidentes_in_itinere?: number;
+          incidentes?: number;
+          dias_perdidos?: number;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
       hys_evaluacion_detalles: {
         Row: {
           id: string;

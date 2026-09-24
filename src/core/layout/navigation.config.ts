@@ -41,5 +41,18 @@ export const APP_MODULES: ModuleNavConfig[] = [
       },
     ],
   },
-  // Módulo 2: agregar su ModuleNavConfig acá cuando exista.
+  {
+    id: "eventos-hys",
+    label: "Eventos de Seguridad",
+    basePath: "/eventos-hys",
+    icon: "alert-triangle",
+    items: [
+      { label: "Resumen", href: "/eventos-hys" },
+      { label: "Registro", href: "/eventos-hys/registro" },
+      { label: "Seguimiento", href: "/eventos-hys/seguimiento" },
+      { label: "Vista H&S", href: "/eventos-hys/reportes/hys" },
+      { label: "Vista Dirección", href: "/eventos-hys/reportes/direccion" },
+    ],
+  },
+  // Módulo 3: agregar su ModuleNavConfig acá cuando exista.
 ];
