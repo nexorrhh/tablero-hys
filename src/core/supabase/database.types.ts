@@ -119,24 +119,6 @@ export interface Database {
           }
         ];
       };
-      hys_sectores: {
-        Row: {
-          id: number;
-          nombre: string;
-          activo: boolean;
-        };
-        Insert: {
-          id?: number;
-          nombre: string;
-          activo?: boolean;
-        };
-        Update: {
-          id?: number;
-          nombre?: string;
-          activo?: boolean;
-        };
-        Relationships: [];
-      };
       hys_factores_accidente: {
         Row: {
           id: number;
@@ -160,7 +142,6 @@ export interface Database {
           id: string;
           tipo: "accidente" | "incidente";
           empleado_id: string | null;
-          sector_id: number | null;
           factor_id: number | null;
           fecha: string;
           descripcion: string;
@@ -176,7 +157,6 @@ export interface Database {
           id?: string;
           tipo: "accidente" | "incidente";
           empleado_id?: string | null;
-          sector_id?: number | null;
           factor_id?: number | null;
           fecha: string;
           descripcion: string;
@@ -192,7 +172,6 @@ export interface Database {
           id?: string;
           tipo?: "accidente" | "incidente";
           empleado_id?: string | null;
-          sector_id?: number | null;
           factor_id?: number | null;
           fecha?: string;
           descripcion?: string;
@@ -209,12 +188,6 @@ export interface Database {
             foreignKeyName: "hys_eventos_empleado_id_fkey";
             columns: ["empleado_id"];
             referencedRelation: "empleados";
-            referencedColumns: ["id"];
-          },
-          {
-            foreignKeyName: "hys_eventos_sector_id_fkey";
-            columns: ["sector_id"];
-            referencedRelation: "hys_sectores";
             referencedColumns: ["id"];
           },
           {

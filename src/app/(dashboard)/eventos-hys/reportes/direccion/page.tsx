@@ -99,7 +99,7 @@ export default async function VistaDireccionEventosPage({
             </thead>
             <tbody>
               {porSector.map((s) => (
-                <tr key={s.sector_id ?? "sin-sector"} className="border-b border-slate-100 last:border-0">
+                <tr key={s.sector_nombre} className="border-b border-slate-100 last:border-0">
                   <td className="py-2 text-slate-700">{s.sector_nombre}</td>
                   <td className="py-2 text-slate-600">{s.accidentes}</td>
                   <td className="py-2 text-slate-600">{s.incidentes}</td>

@@ -1,7 +1,6 @@
 import type { Database } from "@core/supabase/database.types";
 import type { Empleado } from "@core/rrhh/types";
 
-export type Sector = Database["public"]["Tables"]["hys_sectores"]["Row"];
 export type FactorAccidente =
   Database["public"]["Tables"]["hys_factores_accidente"]["Row"];
 
@@ -16,10 +15,13 @@ export type EventoSeguimientoInsert =
 export type HistoricoMensual =
   Database["public"]["Tables"]["hys_historico_mensual"]["Row"];
 
-/** Evento con el empleado y el sector ya resueltos, para uso en UI. */
+/**
+ * Evento con el empleado y el factor ya resueltos, para uso en UI.
+ * No tiene un campo "sector" propio: el sector es el puesto (`desc_puesto`)
+ * del empleado afectado, no un valor elegible a mano (ver types de RRHH).
+ */
 export interface EventoCompleto extends Evento {
   empleado: Empleado | null;
-  sector: Sector | null;
   factor: FactorAccidente | null;
 }
 
@@ -32,7 +34,6 @@ export interface SeguimientoCompleto extends EventoSeguimiento {
 export interface NuevoEventoPayload {
   tipo: "accidente" | "incidente";
   empleado_id: string | null;
-  sector_id: number | null;
   factor_id: number | null;
   fecha: string;
   descripcion: string;

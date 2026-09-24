@@ -1,31 +1,21 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import type { EmpleadoActivo } from "@core/rrhh/types";
 import { CLASIFICACIONES_ACCIDENTE, TIPOS_EVENTO } from "../constants";
-import type { FactorAccidente, Sector } from "../types";
+import type { FactorAccidente } from "../types";
 
 interface EventoFormProps {
   empleados: EmpleadoActivo[];
-  sectores: Sector[];
   factores: FactorAccidente[];
   onSubmit: (formData: FormData) => Promise<{ error: string | null }>;
-  onCrearSector: (nombre: string) => Promise<{ error: string | null; sector?: Sector }>;
 }
 
-export function EventoForm({
-  empleados,
-  sectores: sectoresIniciales,
-  factores,
-  onSubmit,
-  onCrearSector,
-}: EventoFormProps) {
+export function EventoForm({ empleados, factores, onSubmit }: EventoFormProps) {
   const router = useRouter();
   const [tipo, setTipo] = useState<"accidente" | "incidente">("accidente");
   const [empleadoId, setEmpleadoId] = useState("");
-  const [sectores, setSectores] = useState(sectoresIniciales);
-  const [sectorId, setSectorId] = useState("");
   const [factorId, setFactorId] = useState("");
   const [fecha, setFecha] = useState(() => new Date().toISOString().slice(0, 10));
   const [descripcion, setDescripcion] = useState("");
@@ -34,27 +24,15 @@ export function EventoForm({
   const [derivadoAstrolaboral, setDerivadoAstrolaboral] = useState(false);
   const [diasPerdidos, setDiasPerdidos] = useState(0);
   const [informe, setInforme] = useState<File | null>(null);
-  const [nuevoSector, setNuevoSector] = useState("");
-  const [mostrarNuevoSector, setMostrarNuevoSector] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
   const esAccidente = tipo === "accidente";
 
-  function handleAgregarSector() {
-    if (!nuevoSector.trim()) return;
-    startTransition(async () => {
-      const resultado = await onCrearSector(nuevoSector.trim());
-      if (resultado.error || !resultado.sector) {
-        setError(resultado.error ?? "No se pudo crear el sector.");
-        return;
-      }
-      setSectores((prev) => [...prev, resultado.sector!].sort((a, b) => a.nombre.localeCompare(b.nombre)));
-      setSectorId(String(resultado.sector.id));
-      setNuevoSector("");
-      setMostrarNuevoSector(false);
-    });
-  }
+  const sector = useMemo(
+    () => empleados.find((e) => e.id === empleadoId)?.desc_puesto ?? null,
+    [empleados, empleadoId]
+  );
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -63,7 +41,6 @@ export function EventoForm({
     const formData = new FormData();
     formData.set("tipo", tipo);
     formData.set("empleado_id", empleadoId);
-    formData.set("sector_id", sectorId);
     formData.set("factor_id", esAccidente ? factorId : "");
     formData.set("fecha", fecha);
     formData.set("descripcion", descripcion);
@@ -146,47 +123,12 @@ export function EventoForm({
         </div>
 
         <div>
-          <label className="mb-1 block text-sm font-medium text-slate-700">Sector</label>
-          <div className="flex gap-2">
-            <select
-              value={sectorId}
-              onChange={(e) => setSectorId(e.target.value)}
-              className="w-full rounded-md border border-slate-300 p-2 text-sm"
-            >
-              <option value="">— Sin especificar —</option>
-              {sectores.map((s) => (
-                <option key={s.id} value={s.id}>
-                  {s.nombre}
-                </option>
-              ))}
-            </select>
-            <button
-              type="button"
-              onClick={() => setMostrarNuevoSector((v) => !v)}
-              className="whitespace-nowrap rounded-md border border-slate-300 px-3 text-sm text-slate-600 hover:border-brand-accent"
-            >
-              + Nuevo
-            </button>
-          </div>
-          {mostrarNuevoSector ? (
-            <div className="mt-2 flex gap-2">
-              <input
-                type="text"
-                value={nuevoSector}
-                onChange={(e) => setNuevoSector(e.target.value)}
-                placeholder="Nombre del sector"
-                className="w-full rounded-md border border-slate-300 p-2 text-sm"
-              />
-              <button
-                type="button"
-                onClick={handleAgregarSector}
-                disabled={isPending}
-                className="whitespace-nowrap rounded-md bg-brand-accent px-3 text-sm font-medium text-white"
-              >
-                Agregar
-              </button>
-            </div>
-          ) : null}
+          <label className="mb-1 block text-sm font-medium text-slate-700">
+            Sector
+          </label>
+          <p className="rounded-md border border-slate-200 bg-slate-50 p-2 text-sm text-slate-600">
+            {sector ?? "Se completa solo al elegir el empleado"}
+          </p>
         </div>
 
         {esAccidente ? (

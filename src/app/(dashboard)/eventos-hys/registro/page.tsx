@@ -49,7 +49,7 @@ export default async function RegistroEventosPage() {
                   <td className="py-2 text-slate-700">
                     {ev.empleado?.apellido_y_nombre ?? "—"}
                   </td>
-                  <td className="py-2 text-slate-600">{ev.sector?.nombre ?? "—"}</td>
+                  <td className="py-2 text-slate-600">{ev.empleado?.desc_puesto ?? "—"}</td>
                   <td className="py-2 text-slate-600">
                     {ev.clasificacion ?? "—"}
                     {ev.in_itinere ? " · in itinere" : ""}

@@ -2,7 +2,6 @@
 
 import { createSupabaseServerClient } from "@core/supabase/server";
 import { EventosService } from "@modules/eventos-hys/services/eventos.service";
-import { SectoresService } from "@modules/eventos-hys/services/sectores.service";
 import type { NuevoEventoPayload } from "@modules/eventos-hys/types";
 
 function leerNumero(formData: FormData, campo: string): number | null {
@@ -40,7 +39,6 @@ export async function crearEventoAction(
     const payload: NuevoEventoPayload = {
       tipo,
       empleado_id: leerTexto(formData, "empleado_id"),
-      sector_id: leerNumero(formData, "sector_id"),
       factor_id: leerNumero(formData, "factor_id"),
       fecha: String(formData.get("fecha")),
       descripcion: String(formData.get("descripcion")),
@@ -65,19 +63,6 @@ export async function crearEventoAction(
   } catch (err) {
     return {
       error: err instanceof Error ? err.message : "Error al guardar el evento.",
-    };
-  }
-}
-
-export async function crearSectorAction(nombre: string) {
-  try {
-    const supabase = createSupabaseServerClient();
-    const sectoresService = new SectoresService(supabase);
-    const sector = await sectoresService.crear(nombre);
-    return { error: null, sector };
-  } catch (err) {
-    return {
-      error: err instanceof Error ? err.message : "Error al crear el sector.",
     };
   }
 }

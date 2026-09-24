@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import type { EmpleadoActivo } from "@core/rrhh/types";
 import { ASPECTOS_EVALUACION } from "../constants";
 import {
@@ -22,7 +23,7 @@ interface EvaluacionFormProps {
       desvio_gestion: boolean;
       observaciones: string | null;
     }>;
-  }) => Promise<void>;
+  }) => Promise<{ error: string | null }>;
 }
 
 function valorInicial(): Record<number, AspectoRatingValue> {
@@ -40,6 +41,7 @@ function valorInicial(): Record<number, AspectoRatingValue> {
 }
 
 export function EvaluacionForm({ empleados, onSubmit }: EvaluacionFormProps) {
+  const router = useRouter();
   const [empleadoId, setEmpleadoId] = useState("");
   const [fecha, setFecha] = useState(() =>
     new Date().toISOString().slice(0, 10)
@@ -62,26 +64,30 @@ export function EvaluacionForm({ empleados, onSubmit }: EvaluacionFormProps) {
     const fechaEvaluacion = new Date(fecha);
 
     startTransition(async () => {
-      try {
-        await onSubmit({
-          empleado_id: empleadoId,
-          fecha_evaluacion: fecha,
-          mes: fechaEvaluacion.getMonth() + 1,
-          anio: fechaEvaluacion.getFullYear(),
-          detalles: ASPECTOS_EVALUACION.map((aspecto) => {
-            const v = valores[aspecto.id]!;
-            return {
-              aspecto_id: aspecto.id,
-              puntaje: v.puntaje,
-              no_aplica: v.no_aplica,
-              desvio_gestion: v.desvio_gestion,
-              observaciones: v.observaciones || null,
-            };
-          }),
-        });
-      } catch (err) {
-        setError(err instanceof Error ? err.message : "Error al guardar la evaluación.");
+      const resultado = await onSubmit({
+        empleado_id: empleadoId,
+        fecha_evaluacion: fecha,
+        mes: fechaEvaluacion.getMonth() + 1,
+        anio: fechaEvaluacion.getFullYear(),
+        detalles: ASPECTOS_EVALUACION.map((aspecto) => {
+          const v = valores[aspecto.id]!;
+          return {
+            aspecto_id: aspecto.id,
+            puntaje: v.puntaje,
+            no_aplica: v.no_aplica,
+            desvio_gestion: v.desvio_gestion,
+            observaciones: v.observaciones || null,
+          };
+        }),
+      });
+
+      if (resultado.error) {
+        setError(resultado.error);
+        return;
       }
+
+      router.push("/evaluacion-preventiva/evaluaciones");
+      router.refresh();
     });
   }
 

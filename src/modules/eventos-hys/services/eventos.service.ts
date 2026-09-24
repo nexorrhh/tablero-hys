@@ -3,14 +3,13 @@ import type { Database } from "@core/supabase/database.types";
 import type { Evento, EventoCompleto, NuevoEventoPayload } from "../types";
 
 const SELECT_EVENTO_COMPLETO =
-  "*, empleado:empleados(*), sector:hys_sectores(*), factor:hys_factores_accidente(*)";
+  "*, empleado:empleados(*), factor:hys_factores_accidente(*)";
 const BUCKET_INFORMES = "hys-informes";
 
 export interface FiltroEventos {
   desde?: string;
   hasta?: string;
   tipo?: "accidente" | "incidente";
-  sectorId?: number;
 }
 
 /**
@@ -52,7 +51,6 @@ export class EventosService {
     if (filtro?.desde) query = query.gte("fecha", filtro.desde);
     if (filtro?.hasta) query = query.lte("fecha", filtro.hasta);
     if (filtro?.tipo) query = query.eq("tipo", filtro.tipo);
-    if (filtro?.sectorId) query = query.eq("sector_id", filtro.sectorId);
 
     const { data, error } = await query;
     if (error) throw error;

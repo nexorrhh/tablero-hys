@@ -12,7 +12,7 @@ export interface TotalesMes {
 }
 
 export interface TotalesPorSector {
-  sector_id: number | null;
+  /** El "sector" es el puesto (`desc_puesto`) del empleado afectado, no un valor elegible a mano. */
   sector_nombre: string;
   accidentes: number;
   incidentes: number;
@@ -108,10 +108,15 @@ export class ReportesEventosService {
     return Array.from(porMes.values()).sort((a, b) => a.mes - b.mes);
   }
 
+  /**
+   * "Por sector" en realidad agrupa por el puesto (`desc_puesto`) del
+   * empleado afectado en RRHH: no existe un sector elegible a mano (ver
+   * decisión en `NuevoEventoPayload`).
+   */
   async obtenerPorSector(anio?: number): Promise<TotalesPorSector[]> {
     let query = this.supabase
       .from("hys_eventos")
-      .select("tipo, sector:hys_sectores(id, nombre)");
+      .select("tipo, empleado:empleados(desc_puesto)");
 
     if (anio) {
       query = query.gte("fecha", `${anio}-01-01`).lte("fecha", `${anio}-12-31`);
@@ -121,15 +126,14 @@ export class ReportesEventosService {
     if (error) throw error;
 
     type Row = Pick<Evento, "tipo"> & {
-      sector: { id: number; nombre: string } | null;
+      empleado: { desc_puesto: string } | null;
     };
 
     const porSector = new Map<string, TotalesPorSector>();
     for (const fila of (data ?? []) as unknown as Row[]) {
-      const clave = fila.sector ? String(fila.sector.id) : "sin-sector";
-      const existente = porSector.get(clave) ?? {
-        sector_id: fila.sector?.id ?? null,
-        sector_nombre: fila.sector?.nombre ?? "Sin sector",
+      const nombre = fila.empleado?.desc_puesto ?? "Sin especificar";
+      const existente = porSector.get(nombre) ?? {
+        sector_nombre: nombre,
         accidentes: 0,
         incidentes: 0,
       };
@@ -137,7 +141,7 @@ export class ReportesEventosService {
       if (fila.tipo === "accidente") existente.accidentes += 1;
       else existente.incidentes += 1;
 
-      porSector.set(clave, existente);
+      porSector.set(nombre, existente);
     }
 
     return Array.from(porSector.values()).sort(
