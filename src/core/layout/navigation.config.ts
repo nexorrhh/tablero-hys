@@ -54,5 +54,12 @@ export const APP_MODULES: ModuleNavConfig[] = [
       { label: "Vista Dirección", href: "/eventos-hys/reportes/direccion" },
     ],
   },
-  // Módulo 3: agregar su ModuleNavConfig acá cuando exista.
+  {
+    id: "capacitacion",
+    label: "Capacitación",
+    basePath: "/capacitacion",
+    icon: "graduation-cap",
+    items: [{ label: "Capacitaciones", href: "/capacitacion" }],
+  },
+  // Módulo 4: agregar su ModuleNavConfig acá cuando exista.
 ];
