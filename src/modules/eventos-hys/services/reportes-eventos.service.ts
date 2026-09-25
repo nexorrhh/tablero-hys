@@ -37,7 +37,20 @@ export interface ResumenAcciones {
   pendientes: number;
   en_curso: number;
   cerradas: number;
+  vencidas: number;
   porcentaje_cumplimiento: number;
+}
+
+export interface IndicadoresSRT {
+  /** Accidentes registrados x 1000, sobre la dotación activa promedio. */
+  indice_incidencia: number;
+  /** Días caídos x 1000, sobre la dotación activa promedio. */
+  indice_gravedad: number;
+  /** Promedio de días caídos por accidente. */
+  duracion_media_baja: number;
+  total_accidentes: number;
+  total_dias_perdidos: number;
+  dotacion: number;
 }
 
 function totalesVacios(mes: number): TotalesMes {
@@ -253,23 +266,53 @@ export class ReportesEventosService {
     return Array.from(porFactor.values()).sort((a, b) => b.cantidad - a.cantidad);
   }
 
+  /**
+   * Índices estándar de siniestralidad que reporta la SRT (Argentina):
+   * Incidencia, Gravedad y Duración media de la baja. La "dotación" se
+   * aproxima con la cantidad de empleados activos en RRHH (no tenemos la
+   * nómina de "trabajadores cubiertos" que reporta la ART mes a mes).
+   */
+  async obtenerIndicadoresSRT(anio: number, dotacion: number): Promise<IndicadoresSRT> {
+    const totales = await this.obtenerTotalesMensuales(anio);
+    const total_accidentes = totales.reduce(
+      (acc, m) => acc + m.accidentes_art + m.accidentes_particular,
+      0
+    );
+    const total_dias_perdidos = totales.reduce((acc, m) => acc + m.dias_perdidos, 0);
+
+    return {
+      indice_incidencia: dotacion > 0 ? Number(((total_accidentes / dotacion) * 1000).toFixed(1)) : 0,
+      indice_gravedad: dotacion > 0 ? Number(((total_dias_perdidos / dotacion) * 1000).toFixed(1)) : 0,
+      duracion_media_baja:
+        total_accidentes > 0 ? Number((total_dias_perdidos / total_accidentes).toFixed(1)) : 0,
+      total_accidentes,
+      total_dias_perdidos,
+      dotacion,
+    };
+  }
+
   async obtenerResumenAcciones(): Promise<ResumenAcciones> {
     const { data, error } = await this.supabase
       .from("hys_eventos_seguimiento")
-      .select("estado");
+      .select("estado, fecha_compromiso");
 
     if (error) throw error;
 
+    const hoy = new Date().toISOString().slice(0, 10);
     const filas = data ?? [];
     const pendientes = filas.filter((f) => f.estado === "pendiente").length;
     const en_curso = filas.filter((f) => f.estado === "en_curso").length;
     const cerradas = filas.filter((f) => f.estado === "cerrada").length;
+    const vencidas = filas.filter(
+      (f) => f.estado !== "cerrada" && f.fecha_compromiso !== null && f.fecha_compromiso < hoy
+    ).length;
     const total = filas.length;
 
     return {
       pendientes,
       en_curso,
       cerradas,
+      vencidas,
       porcentaje_cumplimiento: total > 0 ? Math.round((cerradas / total) * 100) : 0,
     };
   }

@@ -152,6 +152,9 @@ export interface Database {
           informe_path: string | null;
           estado: "pendiente" | "cerrado";
           fecha_cierre: string | null;
+          nro_siniestro_art: string | null;
+          testigos: string | null;
+          ubicacion_especifica: string | null;
           creado_por: string | null;
           created_at: string;
         };
@@ -169,6 +172,9 @@ export interface Database {
           informe_path?: string | null;
           estado?: "pendiente" | "cerrado";
           fecha_cierre?: string | null;
+          nro_siniestro_art?: string | null;
+          testigos?: string | null;
+          ubicacion_especifica?: string | null;
           creado_por?: string | null;
           created_at?: string;
         };
@@ -186,6 +192,9 @@ export interface Database {
           informe_path?: string | null;
           estado?: "pendiente" | "cerrado";
           fecha_cierre?: string | null;
+          nro_siniestro_art?: string | null;
+          testigos?: string | null;
+          ubicacion_especifica?: string | null;
           creado_por?: string | null;
           created_at?: string;
         };
@@ -214,6 +223,7 @@ export interface Database {
           fecha_compromiso: string | null;
           fecha_cierre: string | null;
           estado: "pendiente" | "en_curso" | "cerrada";
+          prioridad: "alta" | "media" | "baja";
           creado_por: string | null;
           created_at: string;
         };
@@ -226,6 +236,7 @@ export interface Database {
           fecha_compromiso?: string | null;
           fecha_cierre?: string | null;
           estado?: "pendiente" | "en_curso" | "cerrada";
+          prioridad?: "alta" | "media" | "baja";
           creado_por?: string | null;
           created_at?: string;
         };
@@ -238,6 +249,7 @@ export interface Database {
           fecha_compromiso?: string | null;
           fecha_cierre?: string | null;
           estado?: "pendiente" | "en_curso" | "cerrada";
+          prioridad?: "alta" | "media" | "baja";
           creado_por?: string | null;
           created_at?: string;
         };

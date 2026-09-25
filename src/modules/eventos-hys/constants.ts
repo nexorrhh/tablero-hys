@@ -13,3 +13,14 @@ export const ESTADOS_SEGUIMIENTO = [
   { valor: "en_curso", etiqueta: "En curso" },
   { valor: "cerrada", etiqueta: "Cerrada" },
 ] as const;
+
+export const PRIORIDADES_SEGUIMIENTO = [
+  { valor: "alta", etiqueta: "Alta" },
+  { valor: "media", etiqueta: "Media" },
+  { valor: "baja", etiqueta: "Baja" },
+] as const;
+
+export const ESTADOS_EVENTO = [
+  { valor: "pendiente", etiqueta: "Pendiente" },
+  { valor: "cerrado", etiqueta: "Cerrado" },
+] as const;

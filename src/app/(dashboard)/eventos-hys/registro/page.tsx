@@ -4,11 +4,37 @@ import { Badge } from "@core/ui/Badge";
 import { Card } from "@core/ui/Card";
 import { createSupabaseServerClient } from "@core/supabase/server";
 import { EventosService } from "@modules/eventos-hys/services/eventos.service";
+import { FiltrosRegistro } from "@modules/eventos-hys/components/FiltrosRegistro";
+import { ExportarCsvButton } from "@modules/eventos-hys/components/ExportarCsvButton";
 
-export default async function RegistroEventosPage() {
+interface SearchParams {
+  q?: string;
+  tipo?: string;
+  estado?: string;
+  clasificacion?: string;
+  desde?: string;
+  hasta?: string;
+}
+
+export default async function RegistroEventosPage({
+  searchParams,
+}: {
+  searchParams: SearchParams;
+}) {
   const supabase = createSupabaseServerClient();
   const eventosService = new EventosService(supabase);
-  const eventos = await eventosService.listar();
+
+  const eventos = await eventosService.listar({
+    q: searchParams.q,
+    tipo: searchParams.tipo === "accidente" || searchParams.tipo === "incidente" ? searchParams.tipo : undefined,
+    estado: searchParams.estado === "pendiente" || searchParams.estado === "cerrado" ? searchParams.estado : undefined,
+    clasificacion:
+      searchParams.clasificacion === "ART" || searchParams.clasificacion === "particular"
+        ? searchParams.clasificacion
+        : undefined,
+    desde: searchParams.desde,
+    hasta: searchParams.hasta,
+  });
 
   return (
     <>
@@ -25,11 +51,20 @@ export default async function RegistroEventosPage() {
       />
 
       <div className="p-6">
-        <p className="mb-4 text-sm text-slate-500">
+        <FiltrosRegistro valores={searchParams} />
+
+        <p className="mb-3 text-sm text-slate-500">
           Tocá un evento para ver el detalle y cargarle el seguimiento hasta cerrarlo.
         </p>
 
         <Card>
+          <div className="mb-3 flex items-center justify-between">
+            <p className="text-sm text-slate-500">
+              {eventos.length} evento{eventos.length === 1 ? "" : "s"}
+            </p>
+            <ExportarCsvButton eventos={eventos} />
+          </div>
+
           <table className="w-full text-left text-sm">
             <thead>
               <tr className="border-b border-slate-200 text-slate-500">
@@ -81,7 +116,7 @@ export default async function RegistroEventosPage() {
               {eventos.length === 0 ? (
                 <tr>
                   <td colSpan={7} className="py-6 text-center text-slate-400">
-                    Todavía no hay eventos cargados.
+                    No hay eventos que coincidan con el filtro.
                   </td>
                 </tr>
               ) : null}

@@ -42,6 +42,9 @@ export interface NuevoEventoPayload {
   derivado_astrolaboral: boolean;
   dias_perdidos: number;
   informe_path?: string | null;
+  nro_siniestro_art: string | null;
+  testigos: string | null;
+  ubicacion_especifica: string | null;
 }
 
 export interface NuevoSeguimientoPayload {
@@ -50,4 +53,5 @@ export interface NuevoSeguimientoPayload {
   accion_mejora: string;
   responsable_id: string | null;
   fecha_compromiso: string | null;
+  prioridad: "alta" | "media" | "baja";
 }

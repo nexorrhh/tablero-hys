@@ -4,13 +4,20 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import type { EmpleadoActivo } from "@core/rrhh/types";
 import { Badge } from "@core/ui/Badge";
-import { ESTADOS_SEGUIMIENTO } from "../constants";
-import type { EventoCompleto, NuevoSeguimientoPayload, SeguimientoCompleto } from "../types";
+import { ESTADOS_SEGUIMIENTO, PRIORIDADES_SEGUIMIENTO } from "../constants";
+import type {
+  EventoCompleto,
+  FactorAccidente,
+  NuevoSeguimientoPayload,
+  SeguimientoCompleto,
+} from "../types";
+import { EventoForm } from "./EventoForm";
 
 interface EventoDetalleProps {
   evento: EventoCompleto;
   acciones: SeguimientoCompleto[];
   empleados: EmpleadoActivo[];
+  factores: FactorAccidente[];
   onCrearSeguimiento: (payload: NuevoSeguimientoPayload) => Promise<{ error: string | null }>;
   onActualizarEstadoSeguimiento: (
     id: string,
@@ -20,24 +27,34 @@ interface EventoDetalleProps {
   onReabrirEvento: (id: string) => Promise<{ error: string | null }>;
   onSubirInforme: (eventoId: string, formData: FormData) => Promise<{ error: string | null }>;
   onObtenerUrlInforme: (path: string) => Promise<{ url: string | null; error: string | null }>;
+  onActualizarEvento: (formData: FormData) => Promise<{ error: string | null }>;
+}
+
+function esVencida(a: SeguimientoCompleto): boolean {
+  if (a.estado === "cerrada" || !a.fecha_compromiso) return false;
+  return a.fecha_compromiso < new Date().toISOString().slice(0, 10);
 }
 
 export function EventoDetalle({
   evento,
   acciones,
   empleados,
+  factores,
   onCrearSeguimiento,
   onActualizarEstadoSeguimiento,
   onCerrarEvento,
   onReabrirEvento,
   onSubirInforme,
   onObtenerUrlInforme,
+  onActualizarEvento,
 }: EventoDetalleProps) {
   const router = useRouter();
+  const [editando, setEditando] = useState(false);
   const [investigacion, setInvestigacion] = useState("");
   const [accionMejora, setAccionMejora] = useState("");
   const [responsableId, setResponsableId] = useState("");
   const [fechaCompromiso, setFechaCompromiso] = useState("");
+  const [prioridad, setPrioridad] = useState<"alta" | "media" | "baja">("media");
   const [informe, setInforme] = useState<File | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
@@ -55,6 +72,7 @@ export function EventoDetalle({
         accion_mejora: accionMejora,
         responsable_id: responsableId || null,
         fecha_compromiso: fechaCompromiso || null,
+        prioridad,
       });
 
       if (resultado.error) {
@@ -66,6 +84,7 @@ export function EventoDetalle({
       setAccionMejora("");
       setResponsableId("");
       setFechaCompromiso("");
+      setPrioridad("media");
       router.refresh();
     });
   }
@@ -119,6 +138,21 @@ export function EventoDetalle({
     else setError(resultado.error);
   }
 
+  if (editando) {
+    return (
+      <div className="rounded-lg border border-slate-200 bg-white p-5">
+        <h2 className="mb-4 text-sm font-semibold text-slate-700">Editar evento</h2>
+        <EventoForm
+          empleados={empleados}
+          factores={factores}
+          eventoInicial={evento}
+          onSubmit={onActualizarEvento}
+          onCancelar={() => setEditando(false)}
+        />
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       <div className="rounded-lg border border-slate-200 bg-white p-5">
@@ -135,25 +169,34 @@ export function EventoDetalle({
             <p className="text-sm text-slate-500">{evento.fecha}</p>
           </div>
 
-          {evento.estado === "pendiente" ? (
+          <div className="flex items-center gap-2">
             <button
               type="button"
-              disabled={isPending}
-              onClick={handleCerrarEvento}
-              className="rounded-md bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700 disabled:opacity-50"
+              onClick={() => setEditando(true)}
+              className="rounded-md border border-slate-300 px-4 py-2 text-sm font-medium text-slate-600 hover:border-brand-accent"
             >
-              Cerrar evento
+              Editar
             </button>
-          ) : (
-            <button
-              type="button"
-              disabled={isPending}
-              onClick={handleReabrirEvento}
-              className="rounded-md border border-slate-300 px-4 py-2 text-sm font-medium text-slate-600 hover:border-brand-accent disabled:opacity-50"
-            >
-              Reabrir
-            </button>
-          )}
+            {evento.estado === "pendiente" ? (
+              <button
+                type="button"
+                disabled={isPending}
+                onClick={handleCerrarEvento}
+                className="rounded-md bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700 disabled:opacity-50"
+              >
+                Cerrar evento
+              </button>
+            ) : (
+              <button
+                type="button"
+                disabled={isPending}
+                onClick={handleReabrirEvento}
+                className="rounded-md border border-slate-300 px-4 py-2 text-sm font-medium text-slate-600 hover:border-brand-accent disabled:opacity-50"
+              >
+                Reabrir
+              </button>
+            )}
+          </div>
         </div>
 
         <dl className="grid grid-cols-1 gap-3 text-sm sm:grid-cols-3">
@@ -165,6 +208,14 @@ export function EventoDetalle({
             <dt className="text-slate-400">Sector</dt>
             <dd className="text-slate-700">{evento.empleado?.desc_puesto ?? "—"}</dd>
           </div>
+          <div>
+            <dt className="text-slate-400">Ubicación específica</dt>
+            <dd className="text-slate-700">{evento.ubicacion_especifica ?? "—"}</dd>
+          </div>
+          <div>
+            <dt className="text-slate-400">Testigos</dt>
+            <dd className="text-slate-700">{evento.testigos ?? "—"}</dd>
+          </div>
           {evento.tipo === "accidente" ? (
             <>
               <div>
@@ -174,6 +225,12 @@ export function EventoDetalle({
                   {evento.in_itinere ? " · in itinere" : ""}
                 </dd>
               </div>
+              {evento.clasificacion === "ART" ? (
+                <div>
+                  <dt className="text-slate-400">N° siniestro ART</dt>
+                  <dd className="text-slate-700">{evento.nro_siniestro_art ?? "—"}</dd>
+                </div>
+              ) : null}
               <div>
                 <dt className="text-slate-400">Días perdidos</dt>
                 <dd className="text-slate-700">{evento.dias_perdidos}</dd>
@@ -219,6 +276,8 @@ export function EventoDetalle({
             </form>
           )}
         </div>
+
+        {error ? <p className="mt-3 text-sm text-red-600">{error}</p> : null}
       </div>
 
       <div className="rounded-lg border border-slate-200 bg-white p-5">
@@ -278,6 +337,21 @@ export function EventoDetalle({
             />
           </div>
 
+          <div>
+            <label className="mb-1 block text-xs font-medium text-slate-600">Prioridad</label>
+            <select
+              value={prioridad}
+              onChange={(e) => setPrioridad(e.target.value as "alta" | "media" | "baja")}
+              className="w-full rounded-md border border-slate-300 p-2 text-sm"
+            >
+              {PRIORIDADES_SEGUIMIENTO.map((p) => (
+                <option key={p.valor} value={p.valor}>
+                  {p.etiqueta}
+                </option>
+              ))}
+            </select>
+          </div>
+
           <div className="sm:col-span-2">
             {error ? <p className="mb-2 text-sm text-red-600">{error}</p> : null}
             <button
@@ -294,6 +368,7 @@ export function EventoDetalle({
           <thead>
             <tr className="border-b border-slate-200 text-slate-500">
               <th className="pb-2">Acción</th>
+              <th className="pb-2">Prioridad</th>
               <th className="pb-2">Responsable</th>
               <th className="pb-2">Compromiso</th>
               <th className="pb-2">Estado</th>
@@ -303,10 +378,30 @@ export function EventoDetalle({
             {acciones.map((a) => (
               <tr key={a.id} className="border-b border-slate-100 last:border-0">
                 <td className="py-2 max-w-sm text-slate-700">{a.accion_mejora}</td>
+                <td className="py-2">
+                  <Badge
+                    variant={
+                      a.prioridad === "alta"
+                        ? "danger"
+                        : a.prioridad === "media"
+                          ? "warning"
+                          : "default"
+                    }
+                  >
+                    {a.prioridad === "alta" ? "Alta" : a.prioridad === "media" ? "Media" : "Baja"}
+                  </Badge>
+                </td>
                 <td className="py-2 text-slate-600">
                   {a.responsable?.apellido_y_nombre ?? "—"}
                 </td>
-                <td className="py-2 text-slate-600">{a.fecha_compromiso ?? "—"}</td>
+                <td className="py-2 text-slate-600">
+                  {a.fecha_compromiso ?? "—"}
+                  {esVencida(a) ? (
+                    <span className="ml-2">
+                      <Badge variant="danger">Vencida</Badge>
+                    </span>
+                  ) : null}
+                </td>
                 <td className="py-2">
                   <select
                     value={a.estado}
@@ -330,7 +425,7 @@ export function EventoDetalle({
             ))}
             {acciones.length === 0 ? (
               <tr>
-                <td colSpan={4} className="py-6 text-center text-slate-400">
+                <td colSpan={5} className="py-6 text-center text-slate-400">
                   Todavía no hay acciones cargadas para este evento.
                 </td>
               </tr>

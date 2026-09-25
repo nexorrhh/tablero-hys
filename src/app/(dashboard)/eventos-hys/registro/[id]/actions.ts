@@ -2,6 +2,23 @@
 
 import { createSupabaseServerClient } from "@core/supabase/server";
 import { EventosService } from "@modules/eventos-hys/services/eventos.service";
+import { parseEventoFormData } from "@modules/eventos-hys/parseEventoFormData";
+
+export async function actualizarEventoAction(
+  id: string,
+  formData: FormData
+): Promise<{ error: string | null }> {
+  try {
+    const supabase = createSupabaseServerClient();
+    const payload = parseEventoFormData(formData);
+    await new EventosService(supabase).actualizar(id, payload);
+    return { error: null };
+  } catch (err) {
+    return {
+      error: err instanceof Error ? err.message : "Error al actualizar el evento.",
+    };
+  }
+}
 
 export async function cerrarEventoAction(id: string): Promise<{ error: string | null }> {
   try {

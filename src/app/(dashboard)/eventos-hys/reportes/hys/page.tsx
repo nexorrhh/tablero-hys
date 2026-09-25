@@ -20,14 +20,21 @@ export default async function VistaHySEventosPage() {
     seguimientoService.listarTodos(),
   ]);
 
-  const pendientes = acciones.filter((a) => a.estado !== "cerrada");
+  const ORDEN_PRIORIDAD = { alta: 0, media: 1, baja: 2 } as const;
+  const pendientes = acciones
+    .filter((a) => a.estado !== "cerrada")
+    .sort((a, b) => ORDEN_PRIORIDAD[a.prioridad] - ORDEN_PRIORIDAD[b.prioridad]);
+
+  const hoy = new Date().toISOString().slice(0, 10);
+  const esVencida = (fecha: string | null, estado: string) =>
+    estado !== "cerrada" && fecha !== null && fecha < hoy;
 
   return (
     <>
       <Topbar title="Vista H&S — Detalle operativo" />
 
       <div className="space-y-6 p-6">
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-4">
           <Card title="Acciones pendientes">
             <p className="text-2xl font-semibold text-amber-600">
               {resumenAcciones.pendientes}
@@ -36,6 +43,11 @@ export default async function VistaHySEventosPage() {
           <Card title="Acciones en curso">
             <p className="text-2xl font-semibold text-slate-800">
               {resumenAcciones.en_curso}
+            </p>
+          </Card>
+          <Card title="Vencidas">
+            <p className="text-2xl font-semibold text-red-600">
+              {resumenAcciones.vencidas}
             </p>
           </Card>
           <Card title="Acciones cerradas">
@@ -99,6 +111,7 @@ export default async function VistaHySEventosPage() {
             <thead>
               <tr className="border-b border-slate-200 text-slate-500">
                 <th className="pb-2">Acción</th>
+                <th className="pb-2">Prioridad</th>
                 <th className="pb-2">Responsable</th>
                 <th className="pb-2">Compromiso</th>
                 <th className="pb-2">Estado</th>
@@ -119,10 +132,30 @@ export default async function VistaHySEventosPage() {
                       {a.accion_mejora}
                     </Link>
                   </td>
+                  <td className="py-2">
+                    <Badge
+                      variant={
+                        a.prioridad === "alta"
+                          ? "danger"
+                          : a.prioridad === "media"
+                            ? "warning"
+                            : "default"
+                      }
+                    >
+                      {a.prioridad === "alta" ? "Alta" : a.prioridad === "media" ? "Media" : "Baja"}
+                    </Badge>
+                  </td>
                   <td className="py-2 text-slate-600">
                     {a.responsable?.apellido_y_nombre ?? "—"}
                   </td>
-                  <td className="py-2 text-slate-600">{a.fecha_compromiso ?? "—"}</td>
+                  <td className="py-2 text-slate-600">
+                    {a.fecha_compromiso ?? "—"}
+                    {esVencida(a.fecha_compromiso, a.estado) ? (
+                      <span className="ml-2">
+                        <Badge variant="danger">Vencida</Badge>
+                      </span>
+                    ) : null}
+                  </td>
                   <td className="py-2">
                     <Badge variant={a.estado === "en_curso" ? "warning" : "default"}>
                       {a.estado === "en_curso" ? "En curso" : "Pendiente"}
@@ -132,7 +165,7 @@ export default async function VistaHySEventosPage() {
               ))}
               {pendientes.length === 0 ? (
                 <tr>
-                  <td colSpan={4} className="py-6 text-center text-slate-400">
+                  <td colSpan={5} className="py-6 text-center text-slate-400">
                     No hay acciones pendientes.
                   </td>
                 </tr>

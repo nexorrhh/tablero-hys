@@ -3,7 +3,8 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import type { EmpleadoActivo } from "@core/rrhh/types";
-import { ESTADOS_SEGUIMIENTO } from "../constants";
+import { Badge } from "@core/ui/Badge";
+import { ESTADOS_SEGUIMIENTO, PRIORIDADES_SEGUIMIENTO } from "../constants";
 import type { NuevoSeguimientoPayload, SeguimientoCompleto } from "../types";
 
 interface SeguimientoPanelProps {
@@ -32,6 +33,7 @@ export function SeguimientoPanel({
   const [accionMejora, setAccionMejora] = useState("");
   const [responsableId, setResponsableId] = useState("");
   const [fechaCompromiso, setFechaCompromiso] = useState("");
+  const [prioridad, setPrioridad] = useState<"alta" | "media" | "baja">("media");
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
@@ -46,6 +48,7 @@ export function SeguimientoPanel({
         accion_mejora: accionMejora,
         responsable_id: responsableId || null,
         fecha_compromiso: fechaCompromiso || null,
+        prioridad,
       });
 
       if (resultado.error) {
@@ -57,6 +60,7 @@ export function SeguimientoPanel({
       setAccionMejora("");
       setResponsableId("");
       setFechaCompromiso("");
+      setPrioridad("media");
       router.refresh();
     });
   }
@@ -104,6 +108,21 @@ export function SeguimientoPanel({
           />
         </div>
 
+        <div>
+          <label className="mb-1 block text-sm font-medium text-slate-700">Prioridad</label>
+          <select
+            value={prioridad}
+            onChange={(e) => setPrioridad(e.target.value as "alta" | "media" | "baja")}
+            className="w-full rounded-md border border-slate-300 p-2 text-sm"
+          >
+            {PRIORIDADES_SEGUIMIENTO.map((p) => (
+              <option key={p.valor} value={p.valor}>
+                {p.etiqueta}
+              </option>
+            ))}
+          </select>
+        </div>
+
         <div className="sm:col-span-2">
           <label className="mb-1 block text-sm font-medium text-slate-700">
             Investigación / motivo{" "}
@@ -147,6 +166,7 @@ export function SeguimientoPanel({
           <thead>
             <tr className="border-b border-slate-200 text-slate-500">
               <th className="pb-2">Propuesta</th>
+              <th className="pb-2">Prioridad</th>
               <th className="pb-2">Responsable</th>
               <th className="pb-2">Compromiso</th>
               <th className="pb-2">Estado</th>
@@ -156,6 +176,19 @@ export function SeguimientoPanel({
             {acciones.map((a) => (
               <tr key={a.id} className="border-b border-slate-100 last:border-0">
                 <td className="py-2 max-w-sm text-slate-700">{a.accion_mejora}</td>
+                <td className="py-2">
+                  <Badge
+                    variant={
+                      a.prioridad === "alta"
+                        ? "danger"
+                        : a.prioridad === "media"
+                          ? "warning"
+                          : "default"
+                    }
+                  >
+                    {a.prioridad === "alta" ? "Alta" : a.prioridad === "media" ? "Media" : "Baja"}
+                  </Badge>
+                </td>
                 <td className="py-2 text-slate-600">
                   {a.responsable?.apellido_y_nombre ?? "—"}
                 </td>
@@ -183,7 +216,7 @@ export function SeguimientoPanel({
             ))}
             {acciones.length === 0 ? (
               <tr>
-                <td colSpan={4} className="py-6 text-center text-slate-400">
+                <td colSpan={5} className="py-6 text-center text-slate-400">
                   No hay propuestas de mejora sueltas cargadas.
                 </td>
               </tr>

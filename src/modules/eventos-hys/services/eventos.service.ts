@@ -11,6 +11,9 @@ export interface FiltroEventos {
   hasta?: string;
   tipo?: "accidente" | "incidente";
   estado?: "pendiente" | "cerrado";
+  clasificacion?: "ART" | "particular";
+  /** Búsqueda de texto libre en la descripción. */
+  q?: string;
 }
 
 /**
@@ -53,10 +56,17 @@ export class EventosService {
     if (filtro?.hasta) query = query.lte("fecha", filtro.hasta);
     if (filtro?.tipo) query = query.eq("tipo", filtro.tipo);
     if (filtro?.estado) query = query.eq("estado", filtro.estado);
+    if (filtro?.clasificacion) query = query.eq("clasificacion", filtro.clasificacion);
+    if (filtro?.q) query = query.ilike("descripcion", `%${filtro.q}%`);
 
     const { data, error } = await query;
     if (error) throw error;
     return (data ?? []) as unknown as EventoCompleto[];
+  }
+
+  async actualizar(id: string, payload: NuevoEventoPayload): Promise<void> {
+    const { error } = await this.supabase.from("hys_eventos").update(payload).eq("id", id);
+    if (error) throw error;
   }
 
   async cerrar(id: string): Promise<void> {

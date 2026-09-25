@@ -1,21 +1,30 @@
 import { Card } from "@core/ui/Card";
 import { Topbar } from "@core/layout/Topbar";
 import { createSupabaseServerClient } from "@core/supabase/server";
+import { EmpleadosService } from "@core/rrhh/empleados.service";
 import { ReportesEventosService } from "@modules/eventos-hys/services/reportes-eventos.service";
 import { EvolucionAnualChart } from "@modules/eventos-hys/components/EvolucionAnualChart";
 
 export default async function VistaDireccionEventosPage() {
   const supabase = createSupabaseServerClient();
   const reportesService = new ReportesEventosService(supabase);
+  const empleadosService = new EmpleadosService(supabase);
 
   const anioActual = new Date().getFullYear();
 
-  const [evolucionAnual, totalesActual, porSector, resumenAcciones] = await Promise.all([
-    reportesService.obtenerEvolucionAnual(),
-    reportesService.obtenerTotalesMensuales(anioActual),
-    reportesService.obtenerPorSector(anioActual),
-    reportesService.obtenerResumenAcciones(),
-  ]);
+  const [evolucionAnual, totalesActual, porSector, resumenAcciones, empleadosActivos] =
+    await Promise.all([
+      reportesService.obtenerEvolucionAnual(),
+      reportesService.obtenerTotalesMensuales(anioActual),
+      reportesService.obtenerPorSector(anioActual),
+      reportesService.obtenerResumenAcciones(),
+      empleadosService.listarActivos(),
+    ]);
+
+  const indicadoresSRT = await reportesService.obtenerIndicadoresSRT(
+    anioActual,
+    empleadosActivos.length
+  );
 
   const totalArt = totalesActual.reduce((acc, m) => acc + m.accidentes_art, 0);
   const totalAstro = totalesActual.reduce((acc, m) => acc + m.accidentes_particular, 0);
@@ -50,6 +59,35 @@ export default async function VistaDireccionEventosPage() {
             </p>
           </Card>
         </div>
+
+        <Card title="Índices de siniestralidad (criterio SRT)">
+          <p className="mb-3 text-xs text-slate-400">
+            Dotación aproximada con los {indicadoresSRT.dotacion} empleados activos en RRHH.
+          </p>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+            <div>
+              <p className="text-xs text-slate-500">Índice de Incidencia</p>
+              <p className="text-2xl font-semibold text-slate-800">
+                {indicadoresSRT.indice_incidencia}
+              </p>
+              <p className="text-xs text-slate-400">accidentes cada 1000 trabajadores</p>
+            </div>
+            <div>
+              <p className="text-xs text-slate-500">Índice de Gravedad</p>
+              <p className="text-2xl font-semibold text-slate-800">
+                {indicadoresSRT.indice_gravedad}
+              </p>
+              <p className="text-xs text-slate-400">días caídos cada 1000 trabajadores</p>
+            </div>
+            <div>
+              <p className="text-xs text-slate-500">Duración media de la baja</p>
+              <p className="text-2xl font-semibold text-slate-800">
+                {indicadoresSRT.duracion_media_baja}
+              </p>
+              <p className="text-xs text-slate-400">días caídos por accidente</p>
+            </div>
+          </div>
+        </Card>
 
         <Card title="Evolución anual de accidentes laborales">
           <EvolucionAnualChart data={evolucionAnual} />
