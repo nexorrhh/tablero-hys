@@ -2,35 +2,26 @@ import { Card } from "@core/ui/Card";
 import { Topbar } from "@core/layout/Topbar";
 import { createSupabaseServerClient } from "@core/supabase/server";
 import { ReportesEventosService } from "@modules/eventos-hys/services/reportes-eventos.service";
+import { EvolucionAnualChart } from "@modules/eventos-hys/components/EvolucionAnualChart";
 
-export default async function VistaDireccionEventosPage({
-  searchParams,
-}: {
-  searchParams: { anio?: string };
-}) {
+export default async function VistaDireccionEventosPage() {
   const supabase = createSupabaseServerClient();
   const reportesService = new ReportesEventosService(supabase);
 
-  const anioActual = searchParams.anio ? Number(searchParams.anio) : new Date().getFullYear();
-  const anioAnterior = anioActual - 1;
+  const anioActual = new Date().getFullYear();
 
-  const [totalesActual, totalesAnterior, porSector, resumenAcciones] = await Promise.all([
+  const [evolucionAnual, totalesActual, porSector, resumenAcciones] = await Promise.all([
+    reportesService.obtenerEvolucionAnual(),
     reportesService.obtenerTotalesMensuales(anioActual),
-    reportesService.obtenerTotalesMensuales(anioAnterior),
     reportesService.obtenerPorSector(anioActual),
     reportesService.obtenerResumenAcciones(),
   ]);
 
   const totalArt = totalesActual.reduce((acc, m) => acc + m.accidentes_art, 0);
-  const totalParticular = totalesActual.reduce((acc, m) => acc + m.accidentes_particular, 0);
+  const totalAstro = totalesActual.reduce((acc, m) => acc + m.accidentes_particular, 0);
   const totalInItinere = totalesActual.reduce((acc, m) => acc + m.accidentes_in_itinere, 0);
   const totalIncidentes = totalesActual.reduce((acc, m) => acc + m.incidentes, 0);
   const totalDiasPerdidos = totalesActual.reduce((acc, m) => acc + m.dias_perdidos, 0);
-
-  const NOMBRES_MES = [
-    "Ene", "Feb", "Mar", "Abr", "May", "Jun",
-    "Jul", "Ago", "Sep", "Oct", "Nov", "Dic",
-  ];
 
   return (
     <>
@@ -41,8 +32,8 @@ export default async function VistaDireccionEventosPage({
           <Card title="Accidentes ART">
             <p className="text-2xl font-semibold text-slate-800">{totalArt}</p>
           </Card>
-          <Card title="Particulares">
-            <p className="text-2xl font-semibold text-slate-800">{totalParticular}</p>
+          <Card title="ASTRO laboral">
+            <p className="text-2xl font-semibold text-slate-800">{totalAstro}</p>
           </Card>
           <Card title="In itinere">
             <p className="text-2xl font-semibold text-slate-800">{totalInItinere}</p>
@@ -60,32 +51,8 @@ export default async function VistaDireccionEventosPage({
           </Card>
         </div>
 
-        <Card title={`Accidentes por mes — ${anioAnterior} vs ${anioActual}`}>
-          <table className="w-full text-left text-sm">
-            <thead>
-              <tr className="border-b border-slate-200 text-slate-500">
-                <th className="pb-2">Mes</th>
-                <th className="pb-2">{anioAnterior}</th>
-                <th className="pb-2">{anioActual}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {NOMBRES_MES.map((nombre, i) => {
-                const mes = i + 1;
-                const anterior = totalesAnterior.find((m) => m.mes === mes);
-                const actual = totalesActual.find((m) => m.mes === mes);
-                const totalAnterior = (anterior?.accidentes_art ?? 0) + (anterior?.accidentes_particular ?? 0);
-                const totalActualMes = (actual?.accidentes_art ?? 0) + (actual?.accidentes_particular ?? 0);
-                return (
-                  <tr key={mes} className="border-b border-slate-100 last:border-0">
-                    <td className="py-2 text-slate-600">{nombre}</td>
-                    <td className="py-2 text-slate-500">{totalAnterior}</td>
-                    <td className="py-2 font-medium text-slate-800">{totalActualMes}</td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+        <Card title="Evolución anual de accidentes laborales">
+          <EvolucionAnualChart data={evolucionAnual} />
         </Card>
 
         <Card title="Accidentes e incidentes por sector">

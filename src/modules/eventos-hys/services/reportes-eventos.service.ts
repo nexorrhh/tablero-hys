@@ -24,6 +24,15 @@ export interface TotalesPorFactor {
   cantidad: number;
 }
 
+export interface EvolucionAnual {
+  anio: number;
+  accidentes_art: number;
+  /** H&S le dice "ASTRO laboral" a esto: lo gestionado fuera de la ART. */
+  accidentes_particular: number;
+  dias_perdidos: number;
+  esAnioActual: boolean;
+}
+
 export interface ResumenAcciones {
   pendientes: number;
   en_curso: number;
@@ -106,6 +115,70 @@ export class ReportesEventosService {
     }
 
     return Array.from(porMes.values()).sort((a, b) => a.mes - b.mes);
+  }
+
+  /**
+   * Evolución anual (ART / ASTRO laboral / días caídos), combinando el
+   * histórico agregado con la carga detallada real. Devuelve un año por
+   * cada año presente en cualquiera de las dos fuentes, ordenado ascendente.
+   * El año en curso queda con el acumulado hasta la fecha (no hay meses
+   * futuros cargados, así que la suma ya es eso).
+   */
+  async obtenerEvolucionAnual(): Promise<EvolucionAnual[]> {
+    const [historico, eventos] = await Promise.all([
+      this.supabase.from("hys_historico_mensual").select("*"),
+      this.supabase
+        .from("hys_eventos")
+        .select("tipo, clasificacion, dias_perdidos, fecha")
+        .eq("tipo", "accidente"),
+    ]);
+
+    if (historico.error) throw historico.error;
+    if (eventos.error) throw eventos.error;
+
+    const porAnio = new Map<number, EvolucionAnual>();
+    const anioActual = new Date().getFullYear();
+
+    function fila(anio: number): EvolucionAnual {
+      const existente = porAnio.get(anio);
+      if (existente) return existente;
+      const nueva: EvolucionAnual = {
+        anio,
+        accidentes_art: 0,
+        accidentes_particular: 0,
+        dias_perdidos: 0,
+        esAnioActual: anio === anioActual,
+      };
+      porAnio.set(anio, nueva);
+      return nueva;
+    }
+
+    // Meses ya cargados en detalle en `hys_eventos` no deben contarse dos
+    // veces desde el histórico agregado.
+    const aniosMesesConEventos = new Set<string>();
+    for (const ev of eventos.data ?? []) {
+      aniosMesesConEventos.add(`${ev.fecha.slice(0, 4)}-${ev.fecha.slice(5, 7)}`);
+    }
+
+    for (const h of historico.data ?? []) {
+      const clave = `${h.anio}-${String(h.mes).padStart(2, "0")}`;
+      if (aniosMesesConEventos.has(clave)) continue;
+
+      const acumulado = fila(h.anio);
+      acumulado.accidentes_art += h.accidentes_art;
+      acumulado.accidentes_particular += h.accidentes_particular;
+      acumulado.dias_perdidos += h.dias_perdidos;
+    }
+
+    for (const ev of eventos.data ?? []) {
+      const anio = Number(ev.fecha.slice(0, 4));
+      const acumulado = fila(anio);
+      if (ev.clasificacion === "ART") acumulado.accidentes_art += 1;
+      if (ev.clasificacion === "particular") acumulado.accidentes_particular += 1;
+      acumulado.dias_perdidos += ev.dias_perdidos;
+    }
+
+    return Array.from(porAnio.values()).sort((a, b) => a.anio - b.anio);
   }
 
   /**
