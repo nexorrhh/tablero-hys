@@ -10,6 +10,7 @@ export interface FiltroEventos {
   desde?: string;
   hasta?: string;
   tipo?: "accidente" | "incidente";
+  estado?: "pendiente" | "cerrado";
 }
 
 /**
@@ -51,10 +52,29 @@ export class EventosService {
     if (filtro?.desde) query = query.gte("fecha", filtro.desde);
     if (filtro?.hasta) query = query.lte("fecha", filtro.hasta);
     if (filtro?.tipo) query = query.eq("tipo", filtro.tipo);
+    if (filtro?.estado) query = query.eq("estado", filtro.estado);
 
     const { data, error } = await query;
     if (error) throw error;
     return (data ?? []) as unknown as EventoCompleto[];
+  }
+
+  async cerrar(id: string): Promise<void> {
+    const { error } = await this.supabase
+      .from("hys_eventos")
+      .update({ estado: "cerrado", fecha_cierre: new Date().toISOString().slice(0, 10) })
+      .eq("id", id);
+
+    if (error) throw error;
+  }
+
+  async reabrir(id: string): Promise<void> {
+    const { error } = await this.supabase
+      .from("hys_eventos")
+      .update({ estado: "pendiente", fecha_cierre: null })
+      .eq("id", id);
+
+    if (error) throw error;
   }
 
   async subirInforme(eventoId: string, file: File): Promise<string> {

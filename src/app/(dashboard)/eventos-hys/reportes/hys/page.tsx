@@ -107,7 +107,18 @@ export default async function VistaHySEventosPage() {
             <tbody>
               {pendientes.map((a) => (
                 <tr key={a.id} className="border-b border-slate-100 last:border-0">
-                  <td className="py-2 max-w-sm text-slate-700">{a.accion_mejora}</td>
+                  <td className="py-2 max-w-sm text-slate-700">
+                    <Link
+                      href={
+                        a.evento_id
+                          ? `/eventos-hys/registro/${a.evento_id}`
+                          : "/eventos-hys/seguimiento"
+                      }
+                      className="hover:text-brand-accent hover:underline"
+                    >
+                      {a.accion_mejora}
+                    </Link>
+                  </td>
                   <td className="py-2 text-slate-600">
                     {a.responsable?.apellido_y_nombre ?? "—"}
                   </td>
@@ -132,7 +143,7 @@ export default async function VistaHySEventosPage() {
             href="/eventos-hys/seguimiento"
             className="mt-3 inline-block text-sm text-brand-accent hover:underline"
           >
-            Ver / gestionar todo el seguimiento →
+            Ver propuestas de mejora sueltas →
           </Link>
         </Card>
       </div>

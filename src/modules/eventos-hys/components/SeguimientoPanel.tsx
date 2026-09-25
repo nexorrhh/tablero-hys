@@ -4,11 +4,10 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import type { EmpleadoActivo } from "@core/rrhh/types";
 import { ESTADOS_SEGUIMIENTO } from "../constants";
-import type { EventoCompleto, NuevoSeguimientoPayload, SeguimientoCompleto } from "../types";
+import type { NuevoSeguimientoPayload, SeguimientoCompleto } from "../types";
 
 interface SeguimientoPanelProps {
   acciones: SeguimientoCompleto[];
-  eventos: EventoCompleto[];
   empleados: EmpleadoActivo[];
   onCrear: (payload: NuevoSeguimientoPayload) => Promise<{ error: string | null }>;
   onActualizarEstado: (
@@ -17,15 +16,18 @@ interface SeguimientoPanelProps {
   ) => Promise<{ error: string | null }>;
 }
 
+/**
+ * Propuestas de mejora SUELTAS (sin accidente/incidente asociado). El
+ * seguimiento de un evento puntual se carga desde su propia página de
+ * detalle (`/eventos-hys/registro/[id]`), no acá.
+ */
 export function SeguimientoPanel({
   acciones,
-  eventos,
   empleados,
   onCrear,
   onActualizarEstado,
 }: SeguimientoPanelProps) {
   const router = useRouter();
-  const [eventoId, setEventoId] = useState("");
   const [investigacion, setInvestigacion] = useState("");
   const [accionMejora, setAccionMejora] = useState("");
   const [responsableId, setResponsableId] = useState("");
@@ -39,7 +41,7 @@ export function SeguimientoPanel({
 
     startTransition(async () => {
       const resultado = await onCrear({
-        evento_id: eventoId || null,
+        evento_id: null,
         investigacion_causa: investigacion || null,
         accion_mejora: accionMejora,
         responsable_id: responsableId || null,
@@ -51,7 +53,6 @@ export function SeguimientoPanel({
         return;
       }
 
-      setEventoId("");
       setInvestigacion("");
       setAccionMejora("");
       setResponsableId("");
@@ -75,25 +76,6 @@ export function SeguimientoPanel({
       >
         <div>
           <label className="mb-1 block text-sm font-medium text-slate-700">
-            Evento vinculado{" "}
-            <span className="font-normal text-slate-400">— opcional</span>
-          </label>
-          <select
-            value={eventoId}
-            onChange={(e) => setEventoId(e.target.value)}
-            className="w-full rounded-md border border-slate-300 p-2 text-sm"
-          >
-            <option value="">— Propuesta de mejora suelta —</option>
-            {eventos.map((ev) => (
-              <option key={ev.id} value={ev.id}>
-                {ev.fecha} · {ev.tipo} · {ev.descripcion.slice(0, 40)}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        <div>
-          <label className="mb-1 block text-sm font-medium text-slate-700">
             Responsable
           </label>
           <select
@@ -110,32 +92,6 @@ export function SeguimientoPanel({
           </select>
         </div>
 
-        <div className="sm:col-span-2">
-          <label className="mb-1 block text-sm font-medium text-slate-700">
-            Investigación / causa{" "}
-            <span className="font-normal text-slate-400">— opcional</span>
-          </label>
-          <textarea
-            value={investigacion}
-            onChange={(e) => setInvestigacion(e.target.value)}
-            rows={2}
-            className="w-full rounded-md border border-slate-300 p-2 text-sm"
-          />
-        </div>
-
-        <div className="sm:col-span-2">
-          <label className="mb-1 block text-sm font-medium text-slate-700">
-            Acción de mejora
-          </label>
-          <textarea
-            value={accionMejora}
-            onChange={(e) => setAccionMejora(e.target.value)}
-            required
-            rows={2}
-            className="w-full rounded-md border border-slate-300 p-2 text-sm"
-          />
-        </div>
-
         <div>
           <label className="mb-1 block text-sm font-medium text-slate-700">
             Fecha compromiso
@@ -149,13 +105,39 @@ export function SeguimientoPanel({
         </div>
 
         <div className="sm:col-span-2">
+          <label className="mb-1 block text-sm font-medium text-slate-700">
+            Investigación / motivo{" "}
+            <span className="font-normal text-slate-400">— opcional</span>
+          </label>
+          <textarea
+            value={investigacion}
+            onChange={(e) => setInvestigacion(e.target.value)}
+            rows={2}
+            className="w-full rounded-md border border-slate-300 p-2 text-sm"
+          />
+        </div>
+
+        <div className="sm:col-span-2">
+          <label className="mb-1 block text-sm font-medium text-slate-700">
+            Propuesta de mejora
+          </label>
+          <textarea
+            value={accionMejora}
+            onChange={(e) => setAccionMejora(e.target.value)}
+            required
+            rows={2}
+            className="w-full rounded-md border border-slate-300 p-2 text-sm"
+          />
+        </div>
+
+        <div className="sm:col-span-2">
           {error ? <p className="mb-2 text-sm text-red-600">{error}</p> : null}
           <button
             type="submit"
             disabled={isPending}
             className="rounded-md bg-brand-accent px-4 py-2 text-sm font-medium text-white hover:bg-brand-accent/90 disabled:opacity-50"
           >
-            {isPending ? "Guardando…" : "Agregar acción"}
+            {isPending ? "Guardando…" : "Agregar propuesta"}
           </button>
         </div>
       </form>
@@ -164,7 +146,7 @@ export function SeguimientoPanel({
         <table className="w-full text-left text-sm">
           <thead>
             <tr className="border-b border-slate-200 text-slate-500">
-              <th className="pb-2">Acción</th>
+              <th className="pb-2">Propuesta</th>
               <th className="pb-2">Responsable</th>
               <th className="pb-2">Compromiso</th>
               <th className="pb-2">Estado</th>
@@ -202,7 +184,7 @@ export function SeguimientoPanel({
             {acciones.length === 0 ? (
               <tr>
                 <td colSpan={4} className="py-6 text-center text-slate-400">
-                  No hay acciones de mejora cargadas.
+                  No hay propuestas de mejora sueltas cargadas.
                 </td>
               </tr>
             ) : null}

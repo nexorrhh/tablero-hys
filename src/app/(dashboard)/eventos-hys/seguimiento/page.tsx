@@ -1,7 +1,6 @@
 import { Topbar } from "@core/layout/Topbar";
 import { createSupabaseServerClient } from "@core/supabase/server";
 import { EmpleadosService } from "@core/rrhh/empleados.service";
-import { EventosService } from "@modules/eventos-hys/services/eventos.service";
 import { SeguimientoService } from "@modules/eventos-hys/services/seguimiento.service";
 import { SeguimientoPanel } from "@modules/eventos-hys/components/SeguimientoPanel";
 import { actualizarEstadoSeguimientoAction, crearSeguimientoAction } from "./actions";
@@ -9,23 +8,26 @@ import { actualizarEstadoSeguimientoAction, crearSeguimientoAction } from "./act
 export default async function SeguimientoPage() {
   const supabase = createSupabaseServerClient();
   const empleadosService = new EmpleadosService(supabase);
-  const eventosService = new EventosService(supabase);
   const seguimientoService = new SeguimientoService(supabase);
 
-  const [empleados, eventos, acciones] = await Promise.all([
+  const [empleados, acciones] = await Promise.all([
     empleadosService.listarActivos(),
-    eventosService.listar(),
-    seguimientoService.listarTodos(),
+    seguimientoService.listarSueltas(),
   ]);
 
   return (
     <>
-      <Topbar title="Seguimiento de acciones de mejora" />
+      <Topbar title="Propuestas de mejora (sin evento)" />
 
       <div className="p-6">
+        <p className="mb-4 text-sm text-slate-500">
+          El seguimiento de un accidente o incidente puntual se carga desde el
+          detalle de ese evento, en Registro. Acá van las propuestas de mejora
+          que no nacen de un evento específico.
+        </p>
+
         <SeguimientoPanel
           acciones={acciones}
-          eventos={eventos}
           empleados={empleados}
           onCrear={crearSeguimientoAction}
           onActualizarEstado={actualizarEstadoSeguimientoAction}

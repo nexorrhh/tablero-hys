@@ -49,7 +49,7 @@ export const APP_MODULES: ModuleNavConfig[] = [
     items: [
       { label: "Resumen", href: "/eventos-hys" },
       { label: "Registro", href: "/eventos-hys/registro" },
-      { label: "Seguimiento", href: "/eventos-hys/seguimiento" },
+      { label: "Propuestas sueltas", href: "/eventos-hys/seguimiento" },
       { label: "Vista H&S", href: "/eventos-hys/reportes/hys" },
       { label: "Vista Dirección", href: "/eventos-hys/reportes/direccion" },
     ],

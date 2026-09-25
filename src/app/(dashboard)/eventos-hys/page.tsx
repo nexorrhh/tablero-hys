@@ -38,10 +38,10 @@ export default async function ResumenEventosPage() {
             {resumenAcciones.pendientes + resumenAcciones.en_curso}
           </p>
           <Link
-            href="/eventos-hys/seguimiento"
+            href="/eventos-hys/registro"
             className="mt-2 inline-block text-sm text-brand-accent hover:underline"
           >
-            Ver seguimiento
+            Ver eventos
           </Link>
         </Card>
 

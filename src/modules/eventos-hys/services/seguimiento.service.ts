@@ -38,6 +38,18 @@ export class SeguimientoService {
     return (data ?? []) as unknown as SeguimientoCompleto[];
   }
 
+  /** Propuestas de mejora sueltas, sin accidente/incidente asociado. */
+  async listarSueltas(): Promise<SeguimientoCompleto[]> {
+    const { data, error } = await this.supabase
+      .from("hys_eventos_seguimiento")
+      .select(SELECT_SEGUIMIENTO_COMPLETO)
+      .is("evento_id", null)
+      .order("created_at", { ascending: false });
+
+    if (error) throw error;
+    return (data ?? []) as unknown as SeguimientoCompleto[];
+  }
+
   async listarPorEvento(eventoId: string): Promise<SeguimientoCompleto[]> {
     const { data, error } = await this.supabase
       .from("hys_eventos_seguimiento")

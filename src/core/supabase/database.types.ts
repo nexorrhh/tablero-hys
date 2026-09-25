@@ -150,6 +150,8 @@ export interface Database {
           derivado_astrolaboral: boolean;
           dias_perdidos: number;
           informe_path: string | null;
+          estado: "pendiente" | "cerrado";
+          fecha_cierre: string | null;
           creado_por: string | null;
           created_at: string;
         };
@@ -165,6 +167,8 @@ export interface Database {
           derivado_astrolaboral?: boolean;
           dias_perdidos?: number;
           informe_path?: string | null;
+          estado?: "pendiente" | "cerrado";
+          fecha_cierre?: string | null;
           creado_por?: string | null;
           created_at?: string;
         };
@@ -180,6 +184,8 @@ export interface Database {
           derivado_astrolaboral?: boolean;
           dias_perdidos?: number;
           informe_path?: string | null;
+          estado?: "pendiente" | "cerrado";
+          fecha_cierre?: string | null;
           creado_por?: string | null;
           created_at?: string;
         };
