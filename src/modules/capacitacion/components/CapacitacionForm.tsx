@@ -38,6 +38,12 @@ export function CapacitacionForm({ sectores, empleados, onCrear, onCancelar }: C
   const [tieneQuiz, setTieneQuiz] = useState(false);
   const [puntaje, setPuntaje] = useState(70);
   const [preguntas, setPreguntas] = useState<PreguntaState[]>([preguntaVacia()]);
+  const [codigo, setCodigo] = useState("");
+  const [lugar, setLugar] = useState("");
+  const [duracion, setDuracion] = useState("");
+  const [horaInicio, setHoraInicio] = useState("");
+  const [instructorNombre, setInstructorNombre] = useState("");
+  const [instructorMatricula, setInstructorMatricula] = useState("");
   const [error, setError] = useState<string | null>(null);
 
   function toggleId(lista: string[], id: string): string[] {
@@ -65,6 +71,12 @@ export function CapacitacionForm({ sectores, empleados, onCrear, onCancelar }: C
       fechaLimite: fechaLimite || null,
       sectorIds: asignacion === "sector" ? sectorIds : [],
       empleadoIds: asignacion === "individual" ? empleadoIds : [],
+      codigo: codigo.trim() || null,
+      lugar: lugar.trim() || null,
+      duracion: duracion.trim() || null,
+      horaInicio: horaInicio || null,
+      instructorNombre: instructorNombre.trim() || null,
+      instructorMatricula: instructorMatricula.trim() || null,
       preguntas: tieneQuiz
         ? preguntas
             .filter((p) => p.texto.trim())
@@ -150,6 +162,74 @@ export function CapacitacionForm({ sectores, empleados, onCrear, onCancelar }: C
           />
         </div>
       )}
+
+      <div className="rounded-lg border border-slate-200 p-4">
+        <p className="mb-3 text-sm font-medium text-slate-700">
+          Datos de la actividad{" "}
+          <span className="font-normal text-slate-400">— para la constancia individual</span>
+        </p>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <div>
+            <label className="mb-1 block text-xs text-slate-600">Código</label>
+            <input
+              type="text"
+              value={codigo}
+              onChange={(e) => setCodigo(e.target.value)}
+              placeholder="Ej: S035"
+              className="w-full rounded-md border border-slate-300 p-2 text-sm"
+            />
+          </div>
+          <div>
+            <label className="mb-1 block text-xs text-slate-600">Lugar</label>
+            <input
+              type="text"
+              value={lugar}
+              onChange={(e) => setLugar(e.target.value)}
+              placeholder="Ej: Planta Mosconi"
+              className="w-full rounded-md border border-slate-300 p-2 text-sm"
+            />
+          </div>
+          <div>
+            <label className="mb-1 block text-xs text-slate-600">Duración</label>
+            <input
+              type="text"
+              value={duracion}
+              onChange={(e) => setDuracion(e.target.value)}
+              placeholder="Ej: 2 hs"
+              className="w-full rounded-md border border-slate-300 p-2 text-sm"
+            />
+          </div>
+          <div>
+            <label className="mb-1 block text-xs text-slate-600">Hora de inicio</label>
+            <input
+              type="time"
+              value={horaInicio}
+              onChange={(e) => setHoraInicio(e.target.value)}
+              className="w-full rounded-md border border-slate-300 p-2 text-sm"
+            />
+          </div>
+          <div>
+            <label className="mb-1 block text-xs text-slate-600">Instructor</label>
+            <input
+              type="text"
+              value={instructorNombre}
+              onChange={(e) => setInstructorNombre(e.target.value)}
+              placeholder="Nombre del instructor"
+              className="w-full rounded-md border border-slate-300 p-2 text-sm"
+            />
+          </div>
+          <div>
+            <label className="mb-1 block text-xs text-slate-600">Matrícula del instructor</label>
+            <input
+              type="text"
+              value={instructorMatricula}
+              onChange={(e) => setInstructorMatricula(e.target.value)}
+              placeholder="Ej: CPHSSO L2-10954-1"
+              className="w-full rounded-md border border-slate-300 p-2 text-sm"
+            />
+          </div>
+        </div>
+      </div>
 
       <div>
         <label className="mb-1 block text-sm font-medium text-slate-700">Asignación</label>

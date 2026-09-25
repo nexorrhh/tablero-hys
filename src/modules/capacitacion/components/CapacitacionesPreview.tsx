@@ -3,8 +3,16 @@
 import { useState } from "react";
 import { Badge } from "@core/ui/Badge";
 import { Card } from "@core/ui/Card";
-import type { CapacitacionNexo, EmpleadoNexo, NuevaCapacitacionPayload, SectorNexo } from "../types";
+import { PROGRESO_EJEMPLO } from "../mockData";
+import type {
+  CapacitacionNexo,
+  EmpleadoNexo,
+  NuevaCapacitacionPayload,
+  SectorNexo,
+  SeguimientoCapacitacionRow,
+} from "../types";
 import { CapacitacionForm } from "./CapacitacionForm";
+import { SeguimientoCapacitacion } from "./SeguimientoCapacitacion";
 
 interface CapacitacionesPreviewProps {
   capacitacionesIniciales: CapacitacionNexo[];
@@ -27,6 +35,7 @@ export function CapacitacionesPreview({
   const [capacitaciones, setCapacitaciones] = useState(capacitacionesIniciales);
   const [chip, setChip] = useState<"activas" | "archivadas">("activas");
   const [mostrarForm, setMostrarForm] = useState(false);
+  const [abiertaId, setAbiertaId] = useState<string | null>(null);
 
   const filtradas = capacitaciones.filter((c) => (chip === "archivadas" ? c.archivado : !c.archivado));
   const cantArchivadas = capacitaciones.filter((c) => c.archivado).length;
@@ -47,6 +56,13 @@ export function CapacitacionesPreview({
       tiene_quiz: payload.tieneQuiz,
       puntaje_minimo: payload.tieneQuiz ? payload.puntajeMinimo : null,
       created_at: new Date().toISOString(),
+      origen: "hys",
+      codigo: payload.codigo,
+      lugar: payload.lugar,
+      duracion: payload.duracion,
+      hora_inicio: payload.horaInicio,
+      instructor_nombre: payload.instructorNombre,
+      instructor_matricula: payload.instructorMatricula,
     };
     setCapacitaciones((prev) => [nueva, ...prev]);
     setMostrarForm(false);
@@ -67,14 +83,23 @@ export function CapacitacionesPreview({
   function handleEliminar(id: string) {
     if (!confirm("¿Eliminar esta capacitación de la vista previa?")) return;
     setCapacitaciones((prev) => prev.filter((c) => c.id !== id));
+    if (abiertaId === id) setAbiertaId(null);
+  }
+
+  function filasSeguimiento(capId: string): SeguimientoCapacitacionRow[] {
+    const progresos = PROGRESO_EJEMPLO[capId] ?? [];
+    const progMap = new Map(progresos.map((p) => [p.empleado_id, p]));
+    return empleados.map((empleado) => ({ empleado, progreso: progMap.get(empleado.id) ?? null }));
   }
 
   return (
     <div className="space-y-4">
       <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
         <strong>Vista previa.</strong> Los sectores de la lista son los reales de Nexo RRHH; los
-        empleados y las capacitaciones son de ejemplo. Nada de esto se guarda todavía — falta
-        conectar la escritura real a Nexo RRHH.
+        empleados, las capacitaciones y el seguimiento son de ejemplo. Nada de esto se guarda
+        todavía — falta conectar la escritura real a Nexo RRHH (
+        <code>NEXO_RRHH_CIMOMET_SERVICE_ROLE_KEY</code>). Las constancias en PDF sí son reales:
+        probalas desde &ldquo;Ver seguimiento&rdquo; en la capacitación con cuestionario.
       </div>
 
       <div className="flex items-center justify-between gap-4">
@@ -145,6 +170,13 @@ export function CapacitacionesPreview({
                   {cap.descripcion ? (
                     <p className="mt-1.5 text-xs text-slate-500">{cap.descripcion}</p>
                   ) : null}
+                  {cap.codigo || cap.lugar ? (
+                    <p className="mt-1 text-xs text-slate-400">
+                      {cap.codigo ? `Código: ${cap.codigo}` : null}
+                      {cap.codigo && cap.lugar ? " · " : null}
+                      {cap.lugar ? `Lugar: ${cap.lugar}` : null}
+                    </p>
+                  ) : null}
                   {cap.fecha_limite ? (
                     <p className="mt-1 text-xs text-slate-400">
                       Fecha límite: {new Date(cap.fecha_limite).toLocaleDateString("es-AR")}
@@ -153,6 +185,12 @@ export function CapacitacionesPreview({
                 </div>
 
                 <div className="flex flex-shrink-0 flex-wrap items-center justify-end gap-2">
+                  <button
+                    onClick={() => setAbiertaId((prev) => (prev === cap.id ? null : cap.id))}
+                    className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-100"
+                  >
+                    {abiertaId === cap.id ? "Ocultar seguimiento" : "Ver seguimiento"}
+                  </button>
                   {!cap.archivado ? (
                     <button
                       onClick={() => handleToggleActivo(cap.id)}
@@ -175,6 +213,10 @@ export function CapacitacionesPreview({
                   </button>
                 </div>
               </div>
+
+              {abiertaId === cap.id ? (
+                <SeguimientoCapacitacion capacitacion={cap} filas={filasSeguimiento(cap.id)} />
+              ) : null}
             </Card>
           ))}
         </div>
