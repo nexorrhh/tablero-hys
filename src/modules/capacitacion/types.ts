@@ -93,6 +93,8 @@ export interface CapacitacionProgresoNexo {
   firmado_at: string | null;
   firma_ip: string | null;
   firma_user_agent: string | null;
+  /** Firma dibujada con el dedo/mouse al completar, subida a Storage por Nexo RRHH. */
+  firma_imagen_url: string | null;
 }
 
 /** Fila combinada para la pantalla de seguimiento: empleado asignado + su progreso (si existe). */

@@ -104,9 +104,16 @@ export function buildConstanciaHTML(
       ${
         completado && firmadoAt
           ? `<div style="text-align:center">
-          <div style="font-family:Georgia,serif;font-style:italic;font-size:15px;padding-bottom:4px;border-bottom:1px solid #1a1a22;display:inline-block;min-width:220px">
-            ${empleado.apellido}, ${empleado.nombre}
-          </div>
+          ${
+            progreso?.firma_imagen_url
+              ? `<div style="border-bottom:1px solid #1a1a22;display:inline-block;min-width:220px;padding-bottom:2px">
+                  <img src="${progreso.firma_imagen_url}" alt="Firma" style="max-height:60px;max-width:260px;object-fit:contain" onerror="this.style.display='none'">
+                </div>
+                <div style="font-size:9px;color:#333;margin-top:4px">${empleado.apellido}, ${empleado.nombre}</div>`
+              : `<div style="font-family:Georgia,serif;font-style:italic;font-size:15px;padding-bottom:4px;border-bottom:1px solid #1a1a22;display:inline-block;min-width:220px">
+                  ${empleado.apellido}, ${empleado.nombre}
+                </div>`
+          }
           <div style="font-size:8px;color:#555;margin-top:4px">
             Firmado digitalmente el ${fmtFechaHora(firmadoAt)}
           </div>
