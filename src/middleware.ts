@@ -31,9 +31,16 @@ export async function middleware(request: NextRequest) {
     }
   );
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  let user = null;
+  try {
+    ({
+      data: { user },
+    } = await supabase.auth.getUser());
+  } catch {
+    // Cookie de sesión corrupta o ilegible: se trata igual que "sin sesión"
+    // (redirige a /login) en vez de romper el request con un 500.
+    user = null;
+  }
 
   const isLoginRoute = request.nextUrl.pathname.startsWith("/login");
 

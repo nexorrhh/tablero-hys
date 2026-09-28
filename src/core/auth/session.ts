@@ -10,9 +10,17 @@ import type { UsuarioHys } from "./types";
 export async function obtenerUsuarioActual(): Promise<UsuarioHys | null> {
   const supabase = createSupabaseServerClient();
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  let user;
+  try {
+    ({
+      data: { user },
+    } = await supabase.auth.getUser());
+  } catch {
+    // Cookie de sesión corrupta o ilegible (p. ej. quedó partida a la mitad
+    // entre varias cookies `sb-*`): se trata igual que "sin sesión" en vez
+    // de tirar abajo la página con un error de servidor.
+    return null;
+  }
 
   if (!user) return null;
 
