@@ -1,26 +1,39 @@
 import { Topbar } from "@core/layout/Topbar";
+import { obtenerUsuarioActual } from "@core/auth/session";
 import { listarSectoresNexo } from "@modules/capacitacion/services/sectores-nexo.service";
-import { CapacitacionesPreview } from "@modules/capacitacion/components/CapacitacionesPreview";
-import { CAPACITACIONES_EJEMPLO, EMPLEADOS_EJEMPLO } from "@modules/capacitacion/mockData";
+import { CapacitacionesNexoService } from "@modules/capacitacion/services/capacitaciones-nexo.service";
+import { CapacitacionesAdmin } from "@modules/capacitacion/components/CapacitacionesAdmin";
+import {
+  archivarCapacitacionAction,
+  crearCapacitacionAction,
+  eliminarCapacitacionAction,
+  obtenerSeguimientoAction,
+  toggleActivoAction,
+} from "./actions";
 
 export default async function CapacitacionPage() {
-  let sectores: Awaited<ReturnType<typeof listarSectoresNexo>> = [];
-  try {
-    sectores = await listarSectoresNexo();
-  } catch {
-    // Si Nexo RRHH no responde, la vista previa sigue funcionando sin sectores reales.
-    sectores = [];
-  }
+  const [usuario, sectores, capacitaciones, empleados] = await Promise.all([
+    obtenerUsuarioActual(),
+    listarSectoresNexo(),
+    new CapacitacionesNexoService().listar(),
+    new CapacitacionesNexoService().listarEmpleadosActivos(),
+  ]);
 
   return (
     <>
       <Topbar title="Capacitación" />
 
       <div className="p-6">
-        <CapacitacionesPreview
-          capacitacionesIniciales={CAPACITACIONES_EJEMPLO}
+        <CapacitacionesAdmin
+          capacitaciones={capacitaciones}
           sectores={sectores}
-          empleados={EMPLEADOS_EJEMPLO}
+          empleados={empleados}
+          esAdmin={usuario?.rol === "admin"}
+          onCrear={crearCapacitacionAction}
+          onToggleActivo={toggleActivoAction}
+          onArchivar={archivarCapacitacionAction}
+          onEliminar={eliminarCapacitacionAction}
+          onObtenerSeguimiento={obtenerSeguimientoAction}
         />
       </div>
     </>

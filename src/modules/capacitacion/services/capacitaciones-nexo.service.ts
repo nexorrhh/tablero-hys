@@ -48,6 +48,18 @@ export class CapacitacionesNexoService {
     return createNexoRrhhAdminClient();
   }
 
+  async listarEmpleadosActivos(): Promise<EmpleadoNexo[]> {
+    const { data, error } = await this.admin
+      .from("empleados")
+      .select("id, nombre, apellido, legajo, cuil, sector_id")
+      .eq("empresa_id", NEXO_RRHH_EMPRESA_ID)
+      .eq("activo", true)
+      .order("apellido");
+
+    if (error) throw error;
+    return (data ?? []) as EmpleadoNexo[];
+  }
+
   async listar(): Promise<CapacitacionNexo[]> {
     const { data, error } = await this.admin
       .from("capacitaciones")
