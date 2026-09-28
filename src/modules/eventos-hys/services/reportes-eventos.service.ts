@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@core/supabase/database.types";
+import { EmpleadosService } from "@core/rrhh/empleados.service";
 import type { Evento } from "../types";
 
 export interface TotalesMes {
@@ -200,9 +201,7 @@ export class ReportesEventosService {
    * decisión en `NuevoEventoPayload`).
    */
   async obtenerPorSector(anio?: number): Promise<TotalesPorSector[]> {
-    let query = this.supabase
-      .from("hys_eventos")
-      .select("tipo, empleado:empleados(desc_puesto)");
+    let query = this.supabase.from("hys_eventos").select("tipo, empleado_id");
 
     if (anio) {
       query = query.gte("fecha", `${anio}-01-01`).lte("fecha", `${anio}-12-31`);
@@ -211,13 +210,22 @@ export class ReportesEventosService {
     const { data, error } = await query;
     if (error) throw error;
 
-    type Row = Pick<Evento, "tipo"> & {
-      empleado: { desc_puesto: string } | null;
-    };
+    type Row = Pick<Evento, "tipo"> & { empleado_id: string | null };
+    const filas = (data ?? []) as unknown as Row[];
+
+    // El embed de PostgREST sobre `empleados` no sirve acá (esa tabla no
+    // tiene RLS para `authenticated`), así que se resuelve el puesto vía
+    // `v_empleados_activos`.
+    const empleadosService = new EmpleadosService(this.supabase);
+    const mapaEmpleados = await empleadosService.obtenerMapaPorIds(
+      Array.from(new Set(filas.map((f) => f.empleado_id).filter((id): id is string => id !== null)))
+    );
 
     const porSector = new Map<string, TotalesPorSector>();
-    for (const fila of (data ?? []) as unknown as Row[]) {
-      const nombre = fila.empleado?.desc_puesto ?? "Sin especificar";
+    for (const fila of filas) {
+      const nombre =
+        (fila.empleado_id ? mapaEmpleados.get(fila.empleado_id)?.desc_puesto : null) ??
+        "Sin especificar";
       const existente = porSector.get(nombre) ?? {
         sector_nombre: nombre,
         accidentes: 0,

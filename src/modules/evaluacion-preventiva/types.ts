@@ -1,5 +1,5 @@
 import type { Database } from "@core/supabase/database.types";
-import type { Empleado } from "@core/rrhh/types";
+import type { EmpleadoActivo } from "@core/rrhh/types";
 
 export type EvaluacionMensual =
   Database["public"]["Tables"]["hys_evaluaciones_mensuales"]["Row"];
@@ -13,7 +13,7 @@ export type EvaluacionDetalleInsert =
 
 /** Evaluación mensual con sus 6 detalles y los datos del empleado (RRHH), para uso en UI. */
 export interface EvaluacionCompleta extends EvaluacionMensual {
-  empleado: Empleado;
+  empleado: EmpleadoActivo;
   detalles: EvaluacionDetalle[];
 }
 

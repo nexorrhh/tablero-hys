@@ -1,13 +1,14 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@core/supabase/database.types";
+import { EmpleadosService } from "@core/rrhh/empleados.service";
+import type { EmpleadoActivo } from "@core/rrhh/types";
 import type {
   EvaluacionCompleta,
   EvaluacionMensual,
   NuevaEvaluacionPayload,
 } from "../types";
 
-const SELECT_EVALUACION_COMPLETA =
-  "*, empleado:empleados(*), detalles:hys_evaluacion_detalles(*)";
+const SELECT_EVALUACION_COMPLETA = "*, detalles:hys_evaluacion_detalles(*)";
 
 /**
  * Calcula el promedio general de una evaluación.
@@ -36,6 +37,28 @@ export function calcularPromedioGeneral(
  */
 export class EvaluacionesService {
   constructor(private readonly supabase: SupabaseClient<Database>) {}
+
+  /**
+   * Adjunta el empleado (RRHH) a cada fila de evaluación, resuelto vía
+   * `v_empleados_activos` en vez del embed de PostgREST sobre `empleados`
+   * (esa tabla no tiene RLS para `authenticated`, así que el embed siempre
+   * da `null` para un usuario real logueado). Descarta filas cuyo empleado
+   * ya no está activo/no se encuentra, en vez de romper el render.
+   */
+  private async adjuntarEmpleados<T extends { empleado_id: string }>(
+    filas: T[]
+  ): Promise<(T & { empleado: EmpleadoActivo })[]> {
+    const ids = Array.from(new Set(filas.map((f) => f.empleado_id)));
+    const empleadosService = new EmpleadosService(this.supabase);
+    const mapa = await empleadosService.obtenerMapaPorIds(ids);
+
+    return filas
+      .map((fila) => {
+        const empleado = mapa.get(fila.empleado_id);
+        return empleado ? { ...fila, empleado } : null;
+      })
+      .filter((fila): fila is NonNullable<typeof fila> => fila !== null);
+  }
 
   async crearEvaluacionCompleta(
     payload: NuevaEvaluacionPayload
@@ -85,7 +108,11 @@ export class EvaluacionesService {
       .maybeSingle();
 
     if (error) throw error;
-    return data as unknown as EvaluacionCompleta | null;
+    if (!data) return null;
+
+    type Fila = EvaluacionMensual & { detalles: EvaluacionCompleta["detalles"] };
+    const [completa] = await this.adjuntarEmpleados([data as unknown as Fila]);
+    return completa ?? null;
   }
 
   async listarPorEmpleado(empleadoId: string): Promise<EvaluacionCompleta[]> {
@@ -97,7 +124,9 @@ export class EvaluacionesService {
       .order("mes", { ascending: true });
 
     if (error) throw error;
-    return (data ?? []) as unknown as EvaluacionCompleta[];
+
+    type Fila = EvaluacionMensual & { detalles: EvaluacionCompleta["detalles"] };
+    return this.adjuntarEmpleados((data ?? []) as unknown as Fila[]);
   }
 
   async listarPorCiclo(cicloId: string): Promise<EvaluacionCompleta[]> {
@@ -108,7 +137,9 @@ export class EvaluacionesService {
       .order("mes", { ascending: true });
 
     if (error) throw error;
-    return (data ?? []) as unknown as EvaluacionCompleta[];
+
+    type Fila = EvaluacionMensual & { detalles: EvaluacionCompleta["detalles"] };
+    return this.adjuntarEmpleados((data ?? []) as unknown as Fila[]);
   }
 
   async listarPorMes(mes: number, anio: number): Promise<EvaluacionCompleta[]> {
@@ -119,6 +150,8 @@ export class EvaluacionesService {
       .eq("anio", anio);
 
     if (error) throw error;
-    return (data ?? []) as unknown as EvaluacionCompleta[];
+
+    type Fila = EvaluacionMensual & { detalles: EvaluacionCompleta["detalles"] };
+    return this.adjuntarEmpleados((data ?? []) as unknown as Fila[]);
   }
 }

@@ -1,5 +1,5 @@
 import type { Database } from "@core/supabase/database.types";
-import type { Empleado } from "@core/rrhh/types";
+import type { EmpleadoActivo } from "@core/rrhh/types";
 
 export type FactorAccidente =
   Database["public"]["Tables"]["hys_factores_accidente"]["Row"];
@@ -21,14 +21,14 @@ export type HistoricoMensual =
  * del empleado afectado, no un valor elegible a mano (ver types de RRHH).
  */
 export interface EventoCompleto extends Evento {
-  empleado: Empleado | null;
+  empleado: EmpleadoActivo | null;
   factor: FactorAccidente | null;
 }
 
 /** Acción de seguimiento con el evento (si tiene) y el responsable resueltos. */
 export interface SeguimientoCompleto extends EventoSeguimiento {
   evento: Evento | null;
-  responsable: Empleado | null;
+  responsable: EmpleadoActivo | null;
 }
 
 export interface NuevoEventoPayload {

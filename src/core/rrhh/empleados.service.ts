@@ -34,4 +34,24 @@ export class EmpleadosService {
     if (error) throw error;
     return data;
   }
+
+  /**
+   * Empleados activos por id, para "adjuntar" datos de RRHH a filas de otras
+   * tablas (evaluaciones, etc.) sin depender del embed automático de
+   * PostgREST sobre `empleados` — esa tabla tiene RLS solo para `anon`, no
+   * para `authenticated`, así que el embed devuelve `null` para cualquier
+   * usuario real logueado. `v_empleados_activos` sí es legible por
+   * `authenticated`.
+   */
+  async obtenerMapaPorIds(ids: string[]): Promise<Map<string, EmpleadoActivo>> {
+    if (ids.length === 0) return new Map();
+
+    const { data, error } = await this.supabase
+      .from("v_empleados_activos")
+      .select("*")
+      .in("id", ids);
+
+    if (error) throw error;
+    return new Map((data ?? []).map((empleado) => [empleado.id, empleado]));
+  }
 }

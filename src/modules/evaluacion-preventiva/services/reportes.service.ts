@@ -1,13 +1,14 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@core/supabase/database.types";
-import type { Empleado } from "@core/rrhh/types";
+import { EmpleadosService } from "@core/rrhh/empleados.service";
+import type { EmpleadoActivo } from "@core/rrhh/types";
 import { ASPECTOS_EVALUACION } from "../constants";
 import type { EvaluacionDetalle } from "../types";
 
 export interface DesvioGestionPendiente {
   detalle: EvaluacionDetalle;
   aspecto_titulo: string;
-  empleado: Empleado;
+  empleado: EmpleadoActivo;
   evaluacion_id: string;
   fecha_evaluacion: string;
 }
@@ -20,7 +21,7 @@ export interface MapaCalorAspecto {
 }
 
 export interface PromedioAnualEmpleado {
-  empleado: Empleado;
+  empleado: EmpleadoActivo;
   promedio_anual: number | null;
   cantidad_evaluaciones: number;
 }
@@ -44,7 +45,7 @@ export class ReportesService {
     let query = this.supabase
       .from("hys_evaluacion_detalles")
       .select(
-        "*, evaluacion:hys_evaluaciones_mensuales!inner(id, fecha_evaluacion, mes, anio, empleado:empleados(*))"
+        "*, evaluacion:hys_evaluaciones_mensuales!inner(id, fecha_evaluacion, mes, anio, empleado_id)"
       )
       .eq("desvio_gestion", true);
 
@@ -60,19 +61,31 @@ export class ReportesService {
         fecha_evaluacion: string;
         mes: number;
         anio: number;
-        empleado: Empleado;
+        empleado_id: string;
       };
     };
 
-    return ((data ?? []) as unknown as Row[]).map((row) => ({
-      detalle: row,
-      aspecto_titulo:
-        ASPECTOS_EVALUACION.find((a) => a.id === row.aspecto_id)?.titulo ??
-        `Aspecto ${row.aspecto_id}`,
-      empleado: row.evaluacion.empleado,
-      evaluacion_id: row.evaluacion.id,
-      fecha_evaluacion: row.evaluacion.fecha_evaluacion,
-    }));
+    const filas = (data ?? []) as unknown as Row[];
+    const empleadosService = new EmpleadosService(this.supabase);
+    const mapaEmpleados = await empleadosService.obtenerMapaPorIds(
+      Array.from(new Set(filas.map((row) => row.evaluacion.empleado_id)))
+    );
+
+    return filas
+      .map((row) => {
+        const empleado = mapaEmpleados.get(row.evaluacion.empleado_id);
+        if (!empleado) return null;
+        return {
+          detalle: row,
+          aspecto_titulo:
+            ASPECTOS_EVALUACION.find((a) => a.id === row.aspecto_id)?.titulo ??
+            `Aspecto ${row.aspecto_id}`,
+          empleado,
+          evaluacion_id: row.evaluacion.id,
+          fecha_evaluacion: row.evaluacion.fecha_evaluacion,
+        };
+      })
+      .filter((fila): fila is NonNullable<typeof fila> => fila !== null);
   }
 
   /** Promedio por aspecto (para el mapa de calor de capacitación de H&S). */
@@ -130,38 +143,45 @@ export class ReportesService {
   ): Promise<PromedioAnualEmpleado[]> {
     const { data, error } = await this.supabase
       .from("hys_evaluaciones_mensuales")
-      .select("promedio_general, empleado:empleados(*)")
+      .select("promedio_general, empleado_id")
       .eq("anio", anio);
 
     if (error) throw error;
 
-    type Row = { promedio_general: number | null; empleado: Empleado };
+    type Row = { promedio_general: number | null; empleado_id: string };
     const filas = (data ?? []) as unknown as Row[];
 
-    const porEmpleado = new Map<
-      string,
-      { empleado: Empleado; suma: number; cantidad: number }
-    >();
+    const porEmpleado = new Map<string, { suma: number; cantidad: number }>();
 
     for (const fila of filas) {
       if (fila.promedio_general === null) continue;
-      const existente = porEmpleado.get(fila.empleado.id);
+      const existente = porEmpleado.get(fila.empleado_id);
       if (existente) {
         existente.suma += fila.promedio_general;
         existente.cantidad += 1;
       } else {
-        porEmpleado.set(fila.empleado.id, {
-          empleado: fila.empleado,
+        porEmpleado.set(fila.empleado_id, {
           suma: fila.promedio_general,
           cantidad: 1,
         });
       }
     }
 
-    return Array.from(porEmpleado.values()).map((v) => ({
-      empleado: v.empleado,
-      promedio_anual: Number((v.suma / v.cantidad).toFixed(2)),
-      cantidad_evaluaciones: v.cantidad,
-    }));
+    const empleadosService = new EmpleadosService(this.supabase);
+    const mapaEmpleados = await empleadosService.obtenerMapaPorIds(
+      Array.from(porEmpleado.keys())
+    );
+
+    return Array.from(porEmpleado.entries())
+      .map(([empleadoId, v]) => {
+        const empleado = mapaEmpleados.get(empleadoId);
+        if (!empleado) return null;
+        return {
+          empleado,
+          promedio_anual: Number((v.suma / v.cantidad).toFixed(2)),
+          cantidad_evaluaciones: v.cantidad,
+        };
+      })
+      .filter((fila): fila is NonNullable<typeof fila> => fila !== null);
   }
 }

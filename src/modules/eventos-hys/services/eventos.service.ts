@@ -1,9 +1,9 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@core/supabase/database.types";
+import { EmpleadosService } from "@core/rrhh/empleados.service";
 import type { Evento, EventoCompleto, NuevoEventoPayload } from "../types";
 
-const SELECT_EVENTO_COMPLETO =
-  "*, empleado:empleados(*), factor:hys_factores_accidente(*)";
+const SELECT_EVENTO_COMPLETO = "*, factor:hys_factores_accidente(*)";
 const BUCKET_INFORMES = "hys-informes";
 
 export interface FiltroEventos {
@@ -35,6 +35,26 @@ export class EventosService {
     return data;
   }
 
+  /**
+   * Adjunta el empleado (RRHH) vía `v_empleados_activos` en vez del embed de
+   * PostgREST sobre `empleados` (esa tabla no tiene RLS para `authenticated`,
+   * así que el embed siempre da `null` para un usuario real logueado).
+   */
+  private async adjuntarEmpleados(
+    filas: Omit<EventoCompleto, "empleado">[]
+  ): Promise<EventoCompleto[]> {
+    const ids = Array.from(
+      new Set(filas.map((f) => f.empleado_id).filter((id): id is string => id !== null))
+    );
+    const empleadosService = new EmpleadosService(this.supabase);
+    const mapa = await empleadosService.obtenerMapaPorIds(ids);
+
+    return filas.map((fila) => ({
+      ...fila,
+      empleado: fila.empleado_id ? mapa.get(fila.empleado_id) ?? null : null,
+    }));
+  }
+
   async obtenerCompleto(id: string): Promise<EventoCompleto | null> {
     const { data, error } = await this.supabase
       .from("hys_eventos")
@@ -43,7 +63,12 @@ export class EventosService {
       .maybeSingle();
 
     if (error) throw error;
-    return data as unknown as EventoCompleto | null;
+    if (!data) return null;
+
+    const [completo] = await this.adjuntarEmpleados([
+      data as unknown as Omit<EventoCompleto, "empleado">,
+    ]);
+    return completo ?? null;
   }
 
   async listar(filtro?: FiltroEventos): Promise<EventoCompleto[]> {
@@ -61,7 +86,10 @@ export class EventosService {
 
     const { data, error } = await query;
     if (error) throw error;
-    return (data ?? []) as unknown as EventoCompleto[];
+
+    return this.adjuntarEmpleados(
+      (data ?? []) as unknown as Omit<EventoCompleto, "empleado">[]
+    );
   }
 
   async actualizar(id: string, payload: NuevoEventoPayload): Promise<void> {

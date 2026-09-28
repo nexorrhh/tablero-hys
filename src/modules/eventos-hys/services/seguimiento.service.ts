@@ -1,13 +1,13 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@core/supabase/database.types";
+import { EmpleadosService } from "@core/rrhh/empleados.service";
 import type {
   EventoSeguimiento,
   NuevoSeguimientoPayload,
   SeguimientoCompleto,
 } from "../types";
 
-const SELECT_SEGUIMIENTO_COMPLETO =
-  "*, evento:hys_eventos(*), responsable:empleados(*)";
+const SELECT_SEGUIMIENTO_COMPLETO = "*, evento:hys_eventos(*)";
 
 /**
  * Capa de acceso a `hys_eventos_seguimiento`: las acciones de mejora que
@@ -28,6 +28,27 @@ export class SeguimientoService {
     return data;
   }
 
+  /**
+   * Adjunta el responsable (RRHH) vía `v_empleados_activos` en vez del embed
+   * de PostgREST sobre `empleados` (esa tabla no tiene RLS para
+   * `authenticated`, así que el embed siempre da `null` para un usuario real
+   * logueado).
+   */
+  private async adjuntarResponsables(
+    filas: (Omit<SeguimientoCompleto, "responsable"> & { responsable_id: string | null })[]
+  ): Promise<SeguimientoCompleto[]> {
+    const ids = Array.from(
+      new Set(filas.map((f) => f.responsable_id).filter((id): id is string => id !== null))
+    );
+    const empleadosService = new EmpleadosService(this.supabase);
+    const mapa = await empleadosService.obtenerMapaPorIds(ids);
+
+    return filas.map((fila) => ({
+      ...fila,
+      responsable: fila.responsable_id ? mapa.get(fila.responsable_id) ?? null : null,
+    }));
+  }
+
   async listarTodos(): Promise<SeguimientoCompleto[]> {
     const { data, error } = await this.supabase
       .from("hys_eventos_seguimiento")
@@ -35,7 +56,9 @@ export class SeguimientoService {
       .order("created_at", { ascending: false });
 
     if (error) throw error;
-    return (data ?? []) as unknown as SeguimientoCompleto[];
+    return this.adjuntarResponsables((data ?? []) as unknown as Parameters<
+      typeof this.adjuntarResponsables
+    >[0]);
   }
 
   /** Propuestas de mejora sueltas, sin accidente/incidente asociado. */
@@ -47,7 +70,9 @@ export class SeguimientoService {
       .order("created_at", { ascending: false });
 
     if (error) throw error;
-    return (data ?? []) as unknown as SeguimientoCompleto[];
+    return this.adjuntarResponsables((data ?? []) as unknown as Parameters<
+      typeof this.adjuntarResponsables
+    >[0]);
   }
 
   async listarPorEvento(eventoId: string): Promise<SeguimientoCompleto[]> {
@@ -58,7 +83,9 @@ export class SeguimientoService {
       .order("created_at", { ascending: true });
 
     if (error) throw error;
-    return (data ?? []) as unknown as SeguimientoCompleto[];
+    return this.adjuntarResponsables((data ?? []) as unknown as Parameters<
+      typeof this.adjuntarResponsables
+    >[0]);
   }
 
   async actualizarEstado(
