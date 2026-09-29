@@ -2,7 +2,18 @@
 
 import { createSupabaseServerClient } from "@core/supabase/server";
 import { EvaluacionesService } from "@modules/evaluacion-preventiva/services/evaluaciones.service";
+import type { EmpleadoActivo } from "@core/rrhh/types";
 import type { NuevaEvaluacionPayload } from "@modules/evaluacion-preventiva/types";
+
+/** Empleados activos todavía sin evaluación cargada para el período elegido en el formulario. */
+export async function obtenerPendientesPeriodoAction(
+  mes: number,
+  anio: number
+): Promise<EmpleadoActivo[]> {
+  const supabase = createSupabaseServerClient();
+  const evaluacionesService = new EvaluacionesService(supabase);
+  return evaluacionesService.listarEmpleadosPendientes(mes, anio);
+}
 
 /**
  * No llama a `redirect()` acá: esta acción se invoca con `await` dentro de un

@@ -2,10 +2,13 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@core/supabase/database.types";
 import { EmpleadosService } from "@core/rrhh/empleados.service";
 import type { EmpleadoActivo } from "@core/rrhh/types";
+import { calcularMesVencido, generarUltimosPeriodos, periodoAClave } from "../periodo";
 import type {
   EvaluacionCompleta,
   EvaluacionMensual,
   NuevaEvaluacionPayload,
+  PendientesDePeriodo,
+  PeriodoDisponible,
 } from "../types";
 
 const SELECT_EVALUACION_COMPLETA = "*, detalles:hys_evaluacion_detalles(*)";
@@ -78,7 +81,12 @@ export class EvaluacionesService {
       .select("*")
       .single();
 
-    if (errorCabecera) throw errorCabecera;
+    if (errorCabecera) {
+      if (errorCabecera.code === "23505") {
+        throw new Error("Ese empleado ya tiene una evaluación cargada para ese período.");
+      }
+      throw errorCabecera;
+    }
 
     const { error: errorDetalles } = await this.supabase
       .from("hys_evaluacion_detalles")
@@ -153,5 +161,76 @@ export class EvaluacionesService {
 
     type Fila = EvaluacionMensual & { detalles: EvaluacionCompleta["detalles"] };
     return this.adjuntarEmpleados((data ?? []) as unknown as Fila[]);
+  }
+
+  /** Ids de empleados que ya tienen una evaluación cargada para ese período. */
+  private async obtenerEmpleadoIdsEvaluados(
+    mes: number,
+    anio: number
+  ): Promise<Set<string>> {
+    const { data, error } = await this.supabase
+      .from("hys_evaluaciones_mensuales")
+      .select("empleado_id")
+      .eq("mes", mes)
+      .eq("anio", anio);
+
+    if (error) throw error;
+    return new Set((data ?? []).map((fila) => fila.empleado_id));
+  }
+
+  /** Empleados activos que todavía no tienen evaluación cargada para ese período. */
+  async listarEmpleadosPendientes(mes: number, anio: number): Promise<EmpleadoActivo[]> {
+    const empleadosService = new EmpleadosService(this.supabase);
+    const [empleadosActivos, evaluados] = await Promise.all([
+      empleadosService.listarActivos(),
+      this.obtenerEmpleadoIdsEvaluados(mes, anio),
+    ]);
+
+    return empleadosActivos.filter((empleado) => !evaluados.has(empleado.id));
+  }
+
+  /** El mes vencido actual (ej. en septiembre, agosto) con sus pendientes. */
+  async listarPendientesMesVencido(): Promise<PendientesDePeriodo> {
+    const periodo = calcularMesVencido();
+    const empleados = await this.listarEmpleadosPendientes(periodo.mes, periodo.anio);
+    return { periodo, empleados };
+  }
+
+  /**
+   * Períodos vencidos (mirando `cantidadMeses` hacia atrás desde el mes
+   * vencido actual) que todavía tienen algún empleado activo sin evaluar.
+   * Un período fully evaluado deja de aparecer acá — es lo que se ofrece
+   * para elegir en el formulario de carga.
+   */
+  async listarPeriodosDisponibles(cantidadMeses = 12): Promise<PeriodoDisponible[]> {
+    const periodos = generarUltimosPeriodos(cantidadMeses);
+    const anioMinimo = Math.min(...periodos.map((p) => p.anio));
+
+    const empleadosService = new EmpleadosService(this.supabase);
+    const [empleadosActivos, { data, error }] = await Promise.all([
+      empleadosService.listarActivos(),
+      this.supabase
+        .from("hys_evaluaciones_mensuales")
+        .select("mes, anio, empleado_id")
+        .gte("anio", anioMinimo),
+    ]);
+
+    if (error) throw error;
+
+    const evaluadosPorPeriodo = new Map<string, Set<string>>();
+    for (const fila of data ?? []) {
+      const clave = periodoAClave({ mes: fila.mes, anio: fila.anio });
+      const set = evaluadosPorPeriodo.get(clave) ?? new Set<string>();
+      set.add(fila.empleado_id);
+      evaluadosPorPeriodo.set(clave, set);
+    }
+
+    return periodos
+      .map((periodo) => {
+        const evaluados = evaluadosPorPeriodo.get(periodoAClave(periodo)) ?? new Set<string>();
+        const pendientes = empleadosActivos.filter((e) => !evaluados.has(e.id)).length;
+        return { ...periodo, pendientes };
+      })
+      .filter((periodo): periodo is PeriodoDisponible => periodo.pendientes > 0);
   }
 }

@@ -4,13 +4,17 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import type { EmpleadoActivo } from "@core/rrhh/types";
 import { ASPECTOS_EVALUACION } from "../constants";
+import { formatearPeriodo, periodoAClave } from "../periodo";
+import type { PeriodoDisponible } from "../types";
 import {
   AspectoRatingInput,
   type AspectoRatingValue,
 } from "./AspectoRatingInput";
 
 interface EvaluacionFormProps {
-  empleados: EmpleadoActivo[];
+  periodos: PeriodoDisponible[];
+  empleadosIniciales: EmpleadoActivo[];
+  onObtenerPendientes: (mes: number, anio: number) => Promise<EmpleadoActivo[]>;
   onSubmit: (payload: {
     empleado_id: string;
     fecha_evaluacion: string;
@@ -40,18 +44,45 @@ function valorInicial(): Record<number, AspectoRatingValue> {
   );
 }
 
-export function EvaluacionForm({ empleados, onSubmit }: EvaluacionFormProps) {
+export function EvaluacionForm({
+  periodos,
+  empleadosIniciales,
+  onObtenerPendientes,
+  onSubmit,
+}: EvaluacionFormProps) {
   const router = useRouter();
-  const [empleadoId, setEmpleadoId] = useState("");
-  const [fecha, setFecha] = useState(() =>
-    new Date().toISOString().slice(0, 10)
+  const [periodoClave, setPeriodoClave] = useState(() =>
+    periodos[0] ? periodoAClave(periodos[0]) : ""
   );
+  const [empleados, setEmpleados] = useState(empleadosIniciales);
+  const [empleadoId, setEmpleadoId] = useState("");
   const [valores, setValores] = useState(valorInicial);
   const [isPending, startTransition] = useTransition();
+  const [cargandoEmpleados, setCargandoEmpleados] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const periodoSeleccionado = periodos.find((p) => periodoAClave(p) === periodoClave);
+
+  function handleCambiarPeriodo(clave: string) {
+    setPeriodoClave(clave);
+    setEmpleadoId("");
+    const periodo = periodos.find((p) => periodoAClave(p) === clave);
+    if (!periodo) {
+      setEmpleados([]);
+      return;
+    }
+
+    setCargandoEmpleados(true);
+    startTransition(async () => {
+      const pendientes = await onObtenerPendientes(periodo.mes, periodo.anio);
+      setEmpleados(pendientes);
+      setCargandoEmpleados(false);
+    });
+  }
 
   const puedeGuardar =
     empleadoId !== "" &&
+    periodoSeleccionado !== undefined &&
     ASPECTOS_EVALUACION.every((aspecto) => {
       const v = valores[aspecto.id]!;
       return v.no_aplica || v.puntaje !== null;
@@ -61,14 +92,14 @@ export function EvaluacionForm({ empleados, onSubmit }: EvaluacionFormProps) {
     e.preventDefault();
     setError(null);
 
-    const fechaEvaluacion = new Date(fecha);
+    if (!periodoSeleccionado) return;
 
     startTransition(async () => {
       const resultado = await onSubmit({
         empleado_id: empleadoId,
-        fecha_evaluacion: fecha,
-        mes: fechaEvaluacion.getMonth() + 1,
-        anio: fechaEvaluacion.getFullYear(),
+        fecha_evaluacion: new Date().toISOString().slice(0, 10),
+        mes: periodoSeleccionado.mes,
+        anio: periodoSeleccionado.anio,
         detalles: ASPECTOS_EVALUACION.map((aspecto) => {
           const v = valores[aspecto.id]!;
           return {
@@ -96,16 +127,46 @@ export function EvaluacionForm({ empleados, onSubmit }: EvaluacionFormProps) {
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div>
           <label className="mb-1 block text-sm font-medium text-slate-700">
+            Período (mes evaluado)
+          </label>
+          <select
+            value={periodoClave}
+            onChange={(e) => handleCambiarPeriodo(e.target.value)}
+            required
+            className="w-full rounded-md border border-slate-300 p-2 text-sm"
+          >
+            {periodos.map((periodo) => {
+              const clave = periodoAClave(periodo);
+              return (
+                <option key={clave} value={clave}>
+                  {formatearPeriodo(periodo)} ({periodo.pendientes} pendientes)
+                </option>
+              );
+            })}
+          </select>
+          <p className="mt-1 text-xs text-slate-400">
+            Solo se pueden elegir meses ya vencidos con empleados sin evaluar. Un
+            período desaparece de esta lista en cuanto se evalúa a todo el personal activo.
+          </p>
+        </div>
+
+        <div>
+          <label className="mb-1 block text-sm font-medium text-slate-700">
             Empleado
           </label>
           <select
             value={empleadoId}
             onChange={(e) => setEmpleadoId(e.target.value)}
             required
-            className="w-full rounded-md border border-slate-300 p-2 text-sm"
+            disabled={cargandoEmpleados || empleados.length === 0}
+            className="w-full rounded-md border border-slate-300 p-2 text-sm disabled:bg-slate-50 disabled:text-slate-400"
           >
             <option value="" disabled>
-              Seleccionar empleado…
+              {cargandoEmpleados
+                ? "Cargando pendientes…"
+                : empleados.length === 0
+                  ? "Nadie pendiente en este período"
+                  : "Seleccionar empleado…"}
             </option>
             {empleados.map((emp) => (
               <option key={emp.id} value={emp.id}>
@@ -113,19 +174,6 @@ export function EvaluacionForm({ empleados, onSubmit }: EvaluacionFormProps) {
               </option>
             ))}
           </select>
-        </div>
-
-        <div>
-          <label className="mb-1 block text-sm font-medium text-slate-700">
-            Fecha de evaluación
-          </label>
-          <input
-            type="date"
-            value={fecha}
-            onChange={(e) => setFecha(e.target.value)}
-            required
-            className="w-full rounded-md border border-slate-300 p-2 text-sm"
-          />
         </div>
       </div>
 

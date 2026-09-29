@@ -1,5 +1,6 @@
 import type { Database } from "@core/supabase/database.types";
 import type { EmpleadoActivo } from "@core/rrhh/types";
+import type { Periodo } from "./periodo";
 
 export type EvaluacionMensual =
   Database["public"]["Tables"]["hys_evaluaciones_mensuales"]["Row"];
@@ -15,6 +16,17 @@ export type EvaluacionDetalleInsert =
 export interface EvaluacionCompleta extends EvaluacionMensual {
   empleado: EmpleadoActivo;
   detalles: EvaluacionDetalle[];
+}
+
+/** Período seleccionable en el formulario de carga: todavía tiene empleados activos sin evaluar. */
+export interface PeriodoDisponible extends Periodo {
+  pendientes: number;
+}
+
+/** Período vencido con el listado de empleados activos que todavía no tienen evaluación cargada. */
+export interface PendientesDePeriodo {
+  periodo: Periodo;
+  empleados: EmpleadoActivo[];
 }
 
 /** Payload que arma el formulario de carga antes de persistir. */
