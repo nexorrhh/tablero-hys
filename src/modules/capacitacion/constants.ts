@@ -16,3 +16,16 @@ export const PERIODICIDADES = [
   { valor: 6, etiqueta: "Semestral" },
   { valor: 12, etiqueta: "Anual" },
 ] as const;
+
+/**
+ * Técnico de Seguridad e Higiene que carga las capacitaciones desde este
+ * portal. Su firma queda fija (subida una sola vez a Storage) para
+ * estamparse sola en cada constancia, sin tener que dibujarla a mano cada
+ * vez que se crea una capacitación.
+ */
+export const INSTRUCTOR_DEFAULT = {
+  nombre: "Ferreira Gomez Pablo",
+  matricula: "T2-11689-1",
+  firmaUrl:
+    "https://qnqikspihpljzvojlpak.supabase.co/storage/v1/object/public/capacitaciones/firmas/default-instructor-pablo-ferreira.png",
+} as const;

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { PERIODICIDADES, TIPOS_ASIGNACION, TIPOS_CONTENIDO } from "../constants";
+import { INSTRUCTOR_DEFAULT, PERIODICIDADES, TIPOS_ASIGNACION, TIPOS_CONTENIDO } from "../constants";
 import type {
   EmpleadoNexo,
   NuevaCapacitacionPayload,
@@ -10,6 +10,7 @@ import type {
   TipoContenido,
 } from "../types";
 import { PreguntaBuilder, type PreguntaState } from "./PreguntaBuilder";
+import { FirmaPad } from "./FirmaPad";
 
 interface CapacitacionFormProps {
   sectores: SectorNexo[];
@@ -42,8 +43,10 @@ export function CapacitacionForm({ sectores, empleados, onCrear, onCancelar }: C
   const [lugar, setLugar] = useState("");
   const [duracion, setDuracion] = useState("");
   const [horaInicio, setHoraInicio] = useState("");
-  const [instructorNombre, setInstructorNombre] = useState("");
-  const [instructorMatricula, setInstructorMatricula] = useState("");
+  const [instructorNombre, setInstructorNombre] = useState<string>(INSTRUCTOR_DEFAULT.nombre);
+  const [instructorMatricula, setInstructorMatricula] = useState<string>(INSTRUCTOR_DEFAULT.matricula);
+  const [instructorFirma, setInstructorFirma] = useState<string | null>(null);
+  const [firmarDistinto, setFirmarDistinto] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   function toggleId(lista: string[], id: string): string[] {
@@ -77,6 +80,7 @@ export function CapacitacionForm({ sectores, empleados, onCrear, onCancelar }: C
       horaInicio: horaInicio || null,
       instructorNombre: instructorNombre.trim() || null,
       instructorMatricula: instructorMatricula.trim() || null,
+      instructorFirma,
       preguntas: tieneQuiz
         ? preguntas
             .filter((p) => p.texto.trim())
@@ -228,6 +232,44 @@ export function CapacitacionForm({ sectores, empleados, onCrear, onCancelar }: C
               className="w-full rounded-md border border-slate-300 p-2 text-sm"
             />
           </div>
+        </div>
+
+        <div className="mt-4">
+          <label className="mb-1 block text-xs text-slate-600">Firma del instructor</label>
+          {!firmarDistinto ? (
+            <div className="flex items-center gap-3 rounded-md border border-slate-200 bg-slate-50 p-3">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={INSTRUCTOR_DEFAULT.firmaUrl}
+                alt="Firma por defecto"
+                className="h-14 w-auto object-contain"
+              />
+              <p className="text-xs text-slate-500">
+                Se va a usar la firma de {INSTRUCTOR_DEFAULT.nombre} automáticamente.{" "}
+                <button
+                  type="button"
+                  onClick={() => setFirmarDistinto(true)}
+                  className="font-medium text-brand-accent hover:underline"
+                >
+                  Firmar distinto para esta capacitación
+                </button>
+              </p>
+            </div>
+          ) : (
+            <div>
+              <FirmaPad label="Firma del instructor (esta capacitación)" onFirmaLista={setInstructorFirma} />
+              <button
+                type="button"
+                onClick={() => {
+                  setFirmarDistinto(false);
+                  setInstructorFirma(null);
+                }}
+                className="mt-1 text-xs text-slate-400 hover:text-slate-600"
+              >
+                Usar la firma por defecto en su lugar
+              </button>
+            </div>
+          )}
         </div>
       </div>
 

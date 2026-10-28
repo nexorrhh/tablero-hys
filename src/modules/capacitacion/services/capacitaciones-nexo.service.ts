@@ -1,4 +1,5 @@
 import { createNexoRrhhAdminClient, NEXO_RRHH_EMPRESA_ID } from "@core/supabase/nexoRrhh";
+import { INSTRUCTOR_DEFAULT } from "../constants";
 import type {
   CapacitacionNexo,
   CapacitacionProgresoNexo,
@@ -95,12 +96,32 @@ export class CapacitacionesNexoService {
         hora_inicio: payload.horaInicio,
         instructor_nombre: payload.instructorNombre,
         instructor_matricula: payload.instructorMatricula,
+        // Por defecto se estampa la firma fija del técnico de H&S; si se
+        // dibujó una firma puntual para esta capacitación, se reemplaza abajo.
+        instructor_firma_url: payload.instructorFirma ? null : INSTRUCTOR_DEFAULT.firmaUrl,
       })
       .select("*")
       .single();
 
     if (errorCap) throw errorCap;
     const capacitacion = cap as CapacitacionNexo;
+
+    if (payload.instructorFirma) {
+      const path = `firmas/${capacitacion.id}-instructor.png`;
+      const base64 = payload.instructorFirma.split(",")[1] ?? "";
+      const buffer = Buffer.from(base64, "base64");
+      const { error: errorSubida } = await admin.storage
+        .from("capacitaciones")
+        .upload(path, buffer, { contentType: "image/png", upsert: true });
+
+      if (!errorSubida) {
+        const {
+          data: { publicUrl },
+        } = admin.storage.from("capacitaciones").getPublicUrl(path);
+        await admin.from("capacitaciones").update({ instructor_firma_url: publicUrl }).eq("id", capacitacion.id);
+        capacitacion.instructor_firma_url = publicUrl;
+      }
+    }
 
     let empIdsParaMail: string[] = [];
 

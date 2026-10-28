@@ -20,12 +20,14 @@ function fmtFecha(iso: string | null): string {
   return d.toLocaleDateString("es-AR", { timeZone: "America/Argentina/Buenos_Aires" });
 }
 
+const LOGO_CIMOMET_URL = "https://portal.cimomet.com.ar/logos/cimomet.png";
+
 /**
  * Constancia individual de una capacitación (una por participante), estilo
- * "Registro de Capacitación". La firma es un ESTAMPADO de texto (nombre +
- * fecha y hora de `firmado_at`), no una imagen de firma manuscrita — mismo
- * criterio que usa Nexo RRHH para la constancia de recepción del recibo de
- * sueldo (ver `buildReciboHTML.ts` en ese repo).
+ * "Registro de Capacitación". Las firmas (instructor y participante) son
+ * imágenes reales dibujadas con el dedo/mouse cuando existen; si no, se usa
+ * un estampado de texto (nombre + fecha) como respaldo para registros
+ * previos a que este flujo existiera.
  */
 export function buildConstanciaHTML(
   cap: CapacitacionNexo,
@@ -37,10 +39,13 @@ export function buildConstanciaHTML(
   const firmadoAt = progreso?.firmado_at ?? null;
 
   return `<div style="background:#fff;border:1px solid #ddd;border-radius:6px;padding:22px 26px;font-family:Arial,sans-serif;font-size:11px;color:#1c1c1c;line-height:1.5" id="constancia-printable">
-    <div style="display:flex;justify-content:space-between;align-items:flex-start;border-bottom:2px solid #333;padding-bottom:10px;margin-bottom:14px">
-      <div>
-        <div style="font-size:16px;font-weight:700;letter-spacing:.02em">${empresaNombre}</div>
-        <div style="font-size:9px;color:#777;margin-top:2px">Registro de Capacitación</div>
+    <div style="display:flex;justify-content:space-between;align-items:center;border-bottom:2px solid #333;padding-bottom:10px;margin-bottom:14px">
+      <div style="display:flex;align-items:center;gap:10px">
+        <img src="${LOGO_CIMOMET_URL}" alt="" style="height:36px;object-fit:contain" onerror="this.style.display='none'">
+        <div>
+          <div style="font-size:16px;font-weight:700;letter-spacing:.02em">${empresaNombre}</div>
+          <div style="font-size:9px;color:#777;margin-top:2px">Registro de Capacitación</div>
+        </div>
       </div>
       <div style="text-align:right">
         ${cap.codigo ? `<div style="font-size:10px;color:#555">Código: <strong>${cap.codigo}</strong></div>` : ""}
@@ -103,24 +108,39 @@ export function buildConstanciaHTML(
     <div style="border-top:2px solid #555;padding-top:14px">
       ${
         completado && firmadoAt
-          ? `<div style="text-align:center">
-          ${
-            progreso?.firma_imagen_url
-              ? `<div style="border-bottom:1px solid #1a1a22;display:inline-block;min-width:220px;padding-bottom:2px">
-                  <img src="${progreso.firma_imagen_url}" alt="Firma" style="max-height:60px;max-width:260px;object-fit:contain" onerror="this.style.display='none'">
-                </div>
-                <div style="font-size:9px;color:#333;margin-top:4px">${empleado.apellido}, ${empleado.nombre}</div>`
-              : `<div style="font-family:Georgia,serif;font-style:italic;font-size:15px;padding-bottom:4px;border-bottom:1px solid #1a1a22;display:inline-block;min-width:220px">
-                  ${empleado.apellido}, ${empleado.nombre}
-                </div>`
-          }
-          <div style="font-size:8px;color:#555;margin-top:4px">
-            Firmado digitalmente el ${fmtFechaHora(firmadoAt)}
-          </div>
-          <div style="margin-top:6px">
+          ? `<table style="width:100%"><tr>
+            <td style="width:50%;text-align:center;vertical-align:bottom;padding:0 10px">
+              <div style="font-size:7px;text-transform:uppercase;letter-spacing:.08em;color:#777;margin-bottom:6px;font-weight:600">Firma del instructor</div>
+              ${
+                cap.instructor_firma_url
+                  ? `<div style="border-bottom:1px solid #1a1a22;display:inline-block;min-width:180px;padding-bottom:2px">
+                      <img src="${cap.instructor_firma_url}" alt="Firma del instructor" style="max-height:50px;max-width:220px;object-fit:contain" onerror="this.style.display='none'">
+                    </div>`
+                  : `<div style="font-family:Georgia,serif;font-style:italic;font-size:13px;padding-bottom:4px;border-bottom:1px solid #1a1a22;display:inline-block;min-width:180px">
+                      ${cap.instructor_nombre ?? "—"}
+                    </div>`
+              }
+              <div style="font-size:8px;color:#333;margin-top:4px">${cap.instructor_nombre ?? "—"}</div>
+              ${cap.instructor_matricula ? `<div style="font-size:7px;color:#777">Mat. ${cap.instructor_matricula}</div>` : ""}
+            </td>
+            <td style="width:50%;text-align:center;vertical-align:bottom;padding:0 10px">
+              <div style="font-size:7px;text-transform:uppercase;letter-spacing:.08em;color:#777;margin-bottom:6px;font-weight:600">Firma del participante</div>
+              ${
+                progreso?.firma_imagen_url
+                  ? `<div style="border-bottom:1px solid #1a1a22;display:inline-block;min-width:180px;padding-bottom:2px">
+                      <img src="${progreso.firma_imagen_url}" alt="Firma" style="max-height:50px;max-width:220px;object-fit:contain" onerror="this.style.display='none'">
+                    </div>`
+                  : `<div style="font-family:Georgia,serif;font-style:italic;font-size:13px;padding-bottom:4px;border-bottom:1px solid #1a1a22;display:inline-block;min-width:180px">
+                      ${empleado.apellido}, ${empleado.nombre}
+                    </div>`
+              }
+              <div style="font-size:8px;color:#333;margin-top:4px">${empleado.apellido}, ${empleado.nombre}</div>
+              <div style="font-size:7px;color:#777">Firmado el ${fmtFechaHora(firmadoAt)}</div>
+            </td>
+          </tr></table>
+          <div style="text-align:center;margin-top:10px">
             <span style="font-size:8px;text-transform:uppercase;letter-spacing:.08em;color:#0ca30c;border:1px dashed #0ca30c;padding:3px 10px;border-radius:999px;font-weight:600">✓ Completado y firmado</span>
-          </div>
-        </div>`
+          </div>`
           : `<div style="text-align:center;color:#999;font-size:10px">Sin firmar — el participante todavía no completó la capacitación.</div>`
       }
     </div>

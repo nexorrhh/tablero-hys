@@ -55,6 +55,8 @@ export interface CapacitacionNexo {
   hora_inicio: string | null;
   instructor_nombre: string | null;
   instructor_matricula: string | null;
+  /** Firma del instructor, una sola por capacitación (no por empleado). */
+  instructor_firma_url: string | null;
 }
 
 export interface NuevaCapacitacionPayload {
@@ -77,6 +79,8 @@ export interface NuevaCapacitacionPayload {
   horaInicio: string | null;
   instructorNombre: string | null;
   instructorMatricula: string | null;
+  /** PNG en base64 (data URL) del canvas de firma; se sube a Storage al crear. */
+  instructorFirma: string | null;
 }
 
 /** Progreso de un empleado en una capacitación (tabla `capacitacion_progreso` de Nexo RRHH). */
