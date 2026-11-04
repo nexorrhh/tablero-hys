@@ -79,7 +79,8 @@ export default async function CapacitacionPage({
     <>
       <Topbar title="Capacitación" />
 
-      <div className="p-6">
+      <div className="space-y-4 p-6">
+        <SelectorEmpresa actual={empresa} />
         <CapacitacionesAdmin
           empresa={empresa}
           capacitaciones={datos.capacitaciones}
