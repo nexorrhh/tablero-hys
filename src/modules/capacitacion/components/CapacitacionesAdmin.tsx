@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Badge } from "@core/ui/Badge";
 import { Card } from "@core/ui/Card";
+import type { EmpresaCapacitacion } from "../empresas";
 import type {
   CapacitacionNexo,
   EmpleadoNexo,
@@ -15,6 +16,7 @@ import { CapacitacionForm } from "./CapacitacionForm";
 import { SeguimientoCapacitacion } from "./SeguimientoCapacitacion";
 
 interface CapacitacionesAdminProps {
+  empresa: EmpresaCapacitacion;
   capacitaciones: CapacitacionNexo[];
   sectores: SectorNexo[];
   empleados: EmpleadoNexo[];
@@ -36,6 +38,7 @@ function periodicidadLabel(meses: number): string {
 }
 
 export function CapacitacionesAdmin({
+  empresa,
   capacitaciones,
   sectores,
   empleados,
@@ -263,7 +266,7 @@ export function CapacitacionesAdmin({
                       No se pudo cargar el seguimiento.
                     </p>
                   ) : seguimiento ? (
-                    <SeguimientoCapacitacion capacitacion={cap} filas={seguimiento} />
+                    <SeguimientoCapacitacion capacitacion={cap} filas={seguimiento} empresa={empresa} />
                   ) : null
                 ) : null}
               </Card>

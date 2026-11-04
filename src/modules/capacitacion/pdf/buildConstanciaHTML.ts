@@ -20,8 +20,6 @@ function fmtFecha(iso: string | null): string {
   return d.toLocaleDateString("es-AR", { timeZone: "America/Argentina/Buenos_Aires" });
 }
 
-const LOGO_CIMOMET_URL = "https://portal.cimomet.com.ar/logos/cimomet.png";
-
 /**
  * Constancia individual de una capacitación (una por participante), estilo
  * "Registro de Capacitación". Las firmas (instructor y participante) son
@@ -32,7 +30,8 @@ const LOGO_CIMOMET_URL = "https://portal.cimomet.com.ar/logos/cimomet.png";
 export function buildConstanciaHTML(
   cap: CapacitacionNexo,
   fila: SeguimientoCapacitacionRow,
-  empresaNombre = "CIMOMET S.A."
+  empresaNombre: string,
+  logoUrl: string
 ): string {
   const { empleado, progreso } = fila;
   const completado = progreso?.completado ?? false;
@@ -41,7 +40,7 @@ export function buildConstanciaHTML(
   return `<div style="background:#fff;border:1px solid #ddd;border-radius:6px;padding:22px 26px;font-family:Arial,sans-serif;font-size:11px;color:#1c1c1c;line-height:1.5" id="constancia-printable">
     <div style="display:flex;justify-content:space-between;align-items:center;border-bottom:2px solid #333;padding-bottom:10px;margin-bottom:14px">
       <div style="display:flex;align-items:center;gap:10px">
-        <img src="${LOGO_CIMOMET_URL}" alt="" style="height:36px;object-fit:contain" onerror="this.style.display='none'">
+        <img src="${logoUrl}" alt="" style="height:36px;object-fit:contain" onerror="this.style.display='none'">
         <div>
           <div style="font-size:16px;font-weight:700;letter-spacing:.02em">${empresaNombre}</div>
           <div style="font-size:9px;color:#777;margin-top:2px">Registro de Capacitación</div>
@@ -154,9 +153,10 @@ export function buildConstanciaHTML(
 export function imprimirConstancia(
   cap: CapacitacionNexo,
   fila: SeguimientoCapacitacionRow,
-  empresaNombre = "CIMOMET S.A."
+  empresaNombre: string,
+  logoUrl: string
 ): void {
-  const html = buildConstanciaHTML(cap, fila, empresaNombre);
+  const html = buildConstanciaHTML(cap, fila, empresaNombre, logoUrl);
   const ventana = window.open("", "_blank", "width=800,height=1000");
   if (!ventana) return;
 

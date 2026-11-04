@@ -1,5 +1,6 @@
-import { createNexoRrhhAdminClient, NEXO_RRHH_EMPRESA_ID } from "@core/supabase/nexoRrhh";
+import { createNexoRrhhAdminClient, obtenerNexoRrhhProyecto } from "@core/supabase/nexoRrhh";
 import { INSTRUCTOR_DEFAULT } from "../constants";
+import type { EmpresaCapacitacion } from "../empresas";
 import type {
   CapacitacionNexo,
   CapacitacionProgresoNexo,
@@ -8,30 +9,31 @@ import type {
   SeguimientoCapacitacionRow,
 } from "../types";
 
-const NEXO_RRHH_URL = "https://qnqikspihpljzvojlpak.supabase.co";
-const NEXO_RRHH_ANON_KEY =
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFucWlrc3BpaHBsanp2b2pscGFrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk5NzA0OTUsImV4cCI6MjA5NTU0NjQ5NX0.I8C7huQtXoYc4Mhm8oCX-E7XKXRx4xDSNVNhKz2d6uo";
-
 /**
  * Notifica por mail al empleado de una capacitación nueva/asignada (Edge
- * Function propia de Nexo RRHH). Best-effort: si falla, no rompe el alta.
+ * Function propia de Nexo RRHH, desplegada en el proyecto de cada empresa).
+ * Best-effort: si falla, no rompe el alta.
  */
-async function notificarCapacitacion(params: {
-  empleado_id: string;
-  capacitacion_id: string;
-  titulo: string;
-  descripcion: string | null;
-  fecha_limite: string | null;
-}): Promise<void> {
+async function notificarCapacitacion(
+  empresa: EmpresaCapacitacion,
+  params: {
+    empleado_id: string;
+    capacitacion_id: string;
+    titulo: string;
+    descripcion: string | null;
+    fecha_limite: string | null;
+  }
+): Promise<void> {
+  const proyecto = obtenerNexoRrhhProyecto(empresa);
   try {
-    await fetch(`${NEXO_RRHH_URL}/functions/v1/rapid-function?action=notificar_capacitacion`, {
+    await fetch(`${proyecto.url}/functions/v1/rapid-function?action=notificar_capacitacion`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        apikey: NEXO_RRHH_ANON_KEY,
-        Authorization: `Bearer ${NEXO_RRHH_ANON_KEY}`,
+        apikey: proyecto.anonKey,
+        Authorization: `Bearer ${proyecto.anonKey}`,
       },
-      body: JSON.stringify({ ...params, portal_url: "https://portal.cimomet.com.ar" }),
+      body: JSON.stringify({ ...params, portal_url: proyecto.portalUrl }),
     });
   } catch {
     // Best-effort, igual que en Nexo RRHH.
@@ -40,20 +42,26 @@ async function notificarCapacitacion(params: {
 
 /**
  * Capa de acceso a `capacitaciones` (y tablas relacionadas) en el proyecto
- * de Nexo RRHH — Cimomet. Requiere `NEXO_RRHH_CIMOMET_SERVICE_ROLE_KEY`
- * configurada (ver `createNexoRrhhAdminClient`); hasta entonces, cualquier
- * llamada de esta clase tira el error explicativo de esa función.
+ * de Nexo RRHH de la empresa indicada. Requiere la `service_role` key de esa
+ * empresa configurada (ver `createNexoRrhhAdminClient`); hasta entonces,
+ * cualquier llamada de esta clase tira el error explicativo de esa función.
  */
 export class CapacitacionesNexoService {
+  constructor(private readonly empresa: EmpresaCapacitacion) {}
+
   private get admin() {
-    return createNexoRrhhAdminClient();
+    return createNexoRrhhAdminClient(this.empresa);
+  }
+
+  private get empresaId() {
+    return obtenerNexoRrhhProyecto(this.empresa).empresaId;
   }
 
   async listarEmpleadosActivos(): Promise<EmpleadoNexo[]> {
     const { data, error } = await this.admin
       .from("empleados")
       .select("id, nombre, apellido, legajo, cuil, sector_id")
-      .eq("empresa_id", NEXO_RRHH_EMPRESA_ID)
+      .eq("empresa_id", this.empresaId)
       .eq("activo", true)
       .order("apellido");
 
@@ -65,7 +73,7 @@ export class CapacitacionesNexoService {
     const { data, error } = await this.admin
       .from("capacitaciones")
       .select("*")
-      .eq("empresa_id", NEXO_RRHH_EMPRESA_ID)
+      .eq("empresa_id", this.empresaId)
       .order("created_at", { ascending: false });
 
     if (error) throw error;
@@ -78,7 +86,7 @@ export class CapacitacionesNexoService {
     const { data: cap, error: errorCap } = await admin
       .from("capacitaciones")
       .insert({
-        empresa_id: NEXO_RRHH_EMPRESA_ID,
+        empresa_id: this.empresaId,
         origen: "hys",
         titulo: payload.titulo,
         descripcion: payload.descripcion || null,
@@ -129,7 +137,7 @@ export class CapacitacionesNexoService {
       const { data: todos } = await admin
         .from("empleados")
         .select("id")
-        .eq("empresa_id", NEXO_RRHH_EMPRESA_ID)
+        .eq("empresa_id", this.empresaId)
         .eq("activo", true);
       empIdsParaMail = ((todos ?? []) as { id: string }[]).map((e) => e.id);
     } else if (payload.asignacion === "sector" && payload.sectorIds.length) {
@@ -173,7 +181,7 @@ export class CapacitacionesNexoService {
     }
 
     for (const empleadoId of empIdsParaMail) {
-      void notificarCapacitacion({
+      void notificarCapacitacion(this.empresa, {
         empleado_id: empleadoId,
         capacitacion_id: capacitacion.id,
         titulo: payload.titulo,
@@ -222,7 +230,7 @@ export class CapacitacionesNexoService {
         admin
           .from("empleados")
           .select("id, nombre, apellido, legajo, cuil, sector_id")
-          .eq("empresa_id", NEXO_RRHH_EMPRESA_ID)
+          .eq("empresa_id", this.empresaId)
           .eq("activo", true)
           .order("apellido"),
       ]);

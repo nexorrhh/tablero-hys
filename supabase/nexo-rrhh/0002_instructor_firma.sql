@@ -1,6 +1,9 @@
 -- =============================================================================
 -- ATENCIÓN: no es para el proyecto de tablero-hys. Correr a mano en el SQL
--- Editor del proyecto de NEXO RRHH — Cimomet (https://qnqikspihpljzvojlpak.supabase.co).
+-- Editor de CADA proyecto de Nexo RRHH que tablero-hys pueda cargar
+-- capacitaciones:
+--   - Cimomet: https://qnqikspihpljzvojlpak.supabase.co (ya corrida)
+--   - Comoing: https://dbcfbhblwezcvtqtrxkm.supabase.co (pendiente)
 --
 -- Columna nueva, nullable, sobre `capacitaciones`. Esta la escribe EXCLUSIVAMENTE
 -- tablero-hys al crear una capacitación (el instructor firma una sola vez al

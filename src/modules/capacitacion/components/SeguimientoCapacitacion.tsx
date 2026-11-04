@@ -1,15 +1,17 @@
 "use client";
 
 import { Badge } from "@core/ui/Badge";
+import type { EmpresaCapacitacion } from "../empresas";
 import type { CapacitacionNexo, SeguimientoCapacitacionRow } from "../types";
 import { ConstanciaButton } from "./ConstanciaButton";
 
 interface SeguimientoCapacitacionProps {
   capacitacion: CapacitacionNexo;
   filas: SeguimientoCapacitacionRow[];
+  empresa: EmpresaCapacitacion;
 }
 
-export function SeguimientoCapacitacion({ capacitacion, filas }: SeguimientoCapacitacionProps) {
+export function SeguimientoCapacitacion({ capacitacion, filas, empresa }: SeguimientoCapacitacionProps) {
   const completados = filas.filter((f) => f.progreso?.completado).length;
   const pct = filas.length ? Math.round((completados / filas.length) * 100) : 0;
 
@@ -65,7 +67,7 @@ export function SeguimientoCapacitacion({ capacitacion, filas }: SeguimientoCapa
                   {fila.progreso?.firmado_at ? new Date(fila.progreso.firmado_at).toLocaleString("es-AR") : "—"}
                 </td>
                 <td className="py-2">
-                  <ConstanciaButton capacitacion={capacitacion} fila={fila} />
+                  <ConstanciaButton capacitacion={capacitacion} fila={fila} empresa={empresa} />
                 </td>
               </tr>
             );
