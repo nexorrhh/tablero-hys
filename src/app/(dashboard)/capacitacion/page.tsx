@@ -15,6 +15,8 @@ import {
   archivarCapacitacionAction,
   crearCapacitacionAction,
   eliminarCapacitacionAction,
+  guardarAsignacionesAction,
+  obtenerAsignacionesAction,
   obtenerSeguimientoAction,
   toggleActivoAction,
 } from "./actions";
@@ -92,6 +94,8 @@ export default async function CapacitacionPage({
           onArchivar={archivarCapacitacionAction.bind(null, empresa)}
           onEliminar={eliminarCapacitacionAction.bind(null, empresa)}
           onObtenerSeguimiento={obtenerSeguimientoAction.bind(null, empresa)}
+          onObtenerAsignaciones={obtenerAsignacionesAction.bind(null, empresa)}
+          onGuardarAsignaciones={guardarAsignacionesAction.bind(null, empresa)}
         />
       </div>
     </>

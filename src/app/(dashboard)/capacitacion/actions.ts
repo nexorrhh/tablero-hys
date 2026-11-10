@@ -91,3 +91,34 @@ export async function obtenerSeguimientoAction(
     };
   }
 }
+
+export async function obtenerAsignacionesAction(
+  empresa: EmpresaCapacitacion,
+  capId: string
+): Promise<{ data: string[] | null; error: string | null }> {
+  try {
+    const data = await new CapacitacionesNexoService(empresa).obtenerAsignacionesIndividuales(capId);
+    return { data, error: null };
+  } catch (err) {
+    return {
+      data: null,
+      error: err instanceof Error ? err.message : "Error al obtener las asignaciones.",
+    };
+  }
+}
+
+export async function guardarAsignacionesAction(
+  empresa: EmpresaCapacitacion,
+  capId: string,
+  empleadoIds: string[]
+): Promise<{ error: string | null }> {
+  try {
+    await exigirAdmin();
+    await new CapacitacionesNexoService(empresa).guardarAsignaciones(capId, empleadoIds);
+    return { error: null };
+  } catch (err) {
+    return {
+      error: err instanceof Error ? err.message : "Error al guardar las asignaciones.",
+    };
+  }
+}

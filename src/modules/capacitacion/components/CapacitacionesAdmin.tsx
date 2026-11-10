@@ -12,6 +12,7 @@ import type {
   SectorNexo,
   SeguimientoCapacitacionRow,
 } from "../types";
+import { AsignarPanel } from "./AsignarPanel";
 import { CapacitacionForm } from "./CapacitacionForm";
 import { SeguimientoCapacitacion } from "./SeguimientoCapacitacion";
 
@@ -28,7 +29,11 @@ interface CapacitacionesAdminProps {
   onObtenerSeguimiento: (
     capId: string
   ) => Promise<{ data: SeguimientoCapacitacionRow[] | null; error: string | null }>;
+  onObtenerAsignaciones: (capId: string) => Promise<{ data: string[] | null; error: string | null }>;
+  onGuardarAsignaciones: (capId: string, empleadoIds: string[]) => Promise<{ error: string | null }>;
 }
+
+type Panel = { capId: string; tipo: "seguimiento" | "asignar" | "material" };
 
 function periodicidadLabel(meses: number): string {
   if (meses === 1) return "Mensual";
@@ -48,11 +53,13 @@ export function CapacitacionesAdmin({
   onArchivar,
   onEliminar,
   onObtenerSeguimiento,
+  onObtenerAsignaciones,
+  onGuardarAsignaciones,
 }: CapacitacionesAdminProps) {
   const router = useRouter();
   const [chip, setChip] = useState<"activas" | "archivadas">("activas");
   const [mostrarForm, setMostrarForm] = useState(false);
-  const [abiertaId, setAbiertaId] = useState<string | null>(null);
+  const [panel, setPanel] = useState<Panel | null>(null);
   const [seguimientoPorCap, setSeguimientoPorCap] = useState<
     Record<string, SeguimientoCapacitacionRow[] | "cargando" | "error">
   >({});
@@ -101,13 +108,13 @@ export function CapacitacionesAdmin({
     });
   }
 
-  function toggleSeguimiento(capId: string) {
-    if (abiertaId === capId) {
-      setAbiertaId(null);
+  function togglePanel(capId: string, tipo: Panel["tipo"]) {
+    if (panel?.capId === capId && panel.tipo === tipo) {
+      setPanel(null);
       return;
     }
-    setAbiertaId(capId);
-    if (seguimientoPorCap[capId]) return;
+    setPanel({ capId, tipo });
+    if (tipo !== "seguimiento" || seguimientoPorCap[capId]) return;
     setSeguimientoPorCap((prev) => ({ ...prev, [capId]: "cargando" }));
     onObtenerSeguimiento(capId).then((resultado) => {
       setSeguimientoPorCap((prev) => ({
@@ -220,12 +227,38 @@ export function CapacitacionesAdmin({
                   </div>
 
                   <div className="flex flex-shrink-0 flex-wrap items-center justify-end gap-2">
+                    {cap.tipo === "texto" ? (
+                      <button
+                        onClick={() => togglePanel(cap.id, "material")}
+                        className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-100"
+                      >
+                        📎 {panel?.capId === cap.id && panel.tipo === "material" ? "Ocultar material" : "Ver material"}
+                      </button>
+                    ) : cap.contenido_url ? (
+                      <a
+                        href={cap.contenido_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-100"
+                      >
+                        📎 Ver material
+                      </a>
+                    ) : null}
                     <button
-                      onClick={() => toggleSeguimiento(cap.id)}
+                      onClick={() => togglePanel(cap.id, "seguimiento")}
                       className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-100"
                     >
-                      {abiertaId === cap.id ? "Ocultar seguimiento" : "Ver seguimiento"}
+                      👁{" "}
+                      {panel?.capId === cap.id && panel.tipo === "seguimiento" ? "Ocultar" : "Ver detalle"}
                     </button>
+                    {esAdmin && !cap.archivado ? (
+                      <button
+                        onClick={() => togglePanel(cap.id, "asignar")}
+                        className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-100"
+                      >
+                        👥 {panel?.capId === cap.id && panel.tipo === "asignar" ? "Ocultar" : "Asignar"}
+                      </button>
+                    ) : null}
                     {esAdmin ? (
                       <>
                         {!cap.archivado ? (
@@ -256,7 +289,13 @@ export function CapacitacionesAdmin({
                   </div>
                 </div>
 
-                {abiertaId === cap.id ? (
+                {panel?.capId === cap.id && panel.tipo === "material" ? (
+                  <div className="mt-4 whitespace-pre-wrap border-t border-slate-100 pt-4 text-sm text-slate-600">
+                    {cap.contenido_texto || "Sin contenido cargado."}
+                  </div>
+                ) : null}
+
+                {panel?.capId === cap.id && panel.tipo === "seguimiento" ? (
                   seguimiento === "cargando" ? (
                     <p className="mt-4 border-t border-slate-100 pt-4 text-sm text-slate-400">
                       Cargando seguimiento…
@@ -268,6 +307,15 @@ export function CapacitacionesAdmin({
                   ) : seguimiento ? (
                     <SeguimientoCapacitacion capacitacion={cap} filas={seguimiento} empresa={empresa} />
                   ) : null
+                ) : null}
+
+                {panel?.capId === cap.id && panel.tipo === "asignar" ? (
+                  <AsignarPanel
+                    capId={cap.id}
+                    empleados={empleados}
+                    onObtenerAsignaciones={onObtenerAsignaciones}
+                    onGuardar={onGuardarAsignaciones}
+                  />
                 ) : null}
               </Card>
             );

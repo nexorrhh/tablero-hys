@@ -270,4 +270,58 @@ export class CapacitacionesNexoService {
 
     return scope.map((empleado) => ({ empleado, progreso: progMap[empleado.id] ?? null }));
   }
+
+  /** Ids de los empleados asignados individualmente (no por sector ni "todos"). */
+  async obtenerAsignacionesIndividuales(capId: string): Promise<string[]> {
+    const { data, error } = await this.admin
+      .from("capacitacion_empleados")
+      .select("empleado_id")
+      .eq("capacitacion_id", capId);
+
+    if (error) throw error;
+    return ((data ?? []) as { empleado_id: string }[]).map((a) => a.empleado_id);
+  }
+
+  /**
+   * Reemplaza la asignación individual completa de la capacitación por
+   * `empleadoIds` (borra y vuelve a cargar, igual que en Nexo RRHH). Solo
+   * notifica por mail a los que se agregan de nuevo, no a los que ya estaban.
+   */
+  async guardarAsignaciones(capId: string, empleadoIds: string[]): Promise<void> {
+    const admin = this.admin;
+    const previos = await this.obtenerAsignacionesIndividuales(capId);
+    const prevSet = new Set(previos);
+    const nuevos = empleadoIds.filter((id) => !prevSet.has(id));
+
+    const { error: errorDelete } = await admin
+      .from("capacitacion_empleados")
+      .delete()
+      .eq("capacitacion_id", capId);
+    if (errorDelete) throw errorDelete;
+
+    if (empleadoIds.length) {
+      const { error: errorInsert } = await admin
+        .from("capacitacion_empleados")
+        .insert(empleadoIds.map((empleado_id) => ({ capacitacion_id: capId, empleado_id })));
+      if (errorInsert) throw errorInsert;
+    }
+
+    if (nuevos.length) {
+      const { data: cap } = await admin
+        .from("capacitaciones")
+        .select("titulo, descripcion, fecha_limite")
+        .eq("id", capId)
+        .single();
+
+      for (const empleadoId of nuevos) {
+        void notificarCapacitacion(this.empresa, {
+          empleado_id: empleadoId,
+          capacitacion_id: capId,
+          titulo: cap?.titulo ?? "",
+          descripcion: cap?.descripcion ?? null,
+          fecha_limite: cap?.fecha_limite ?? null,
+        });
+      }
+    }
+  }
 }
