@@ -53,19 +53,36 @@ export function CapacitacionForm({ sectores, empleados, onCrear, onCancelar }: C
     return lista.includes(id) ? lista.filter((x) => x !== id) : [...lista, id];
   }
 
-  function handleSubmit(e: React.FormEvent) {
+  function leerComoDataUrl(file: File): Promise<string> {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = () => reject(reader.error);
+      reader.readAsDataURL(file);
+    });
+  }
+
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!titulo.trim()) {
       setError("El título es obligatorio.");
       return;
     }
+    if (tipo === "pdf" && !pdfFile) {
+      setError("Seleccioná un archivo PDF.");
+      return;
+    }
     setError(null);
+
+    const pdfArchivo =
+      tipo === "pdf" && pdfFile ? { nombre: pdfFile.name, dataUrl: await leerComoDataUrl(pdfFile) } : null;
 
     onCrear({
       titulo: titulo.trim(),
       descripcion: descripcion.trim(),
       tipo,
-      contenidoUrl: tipo === "video" ? videoUrl.trim() || null : tipo === "pdf" && pdfFile ? pdfFile.name : null,
+      contenidoUrl: tipo === "video" ? videoUrl.trim() || null : null,
+      pdfArchivo,
       contenidoTexto: tipo === "texto" ? texto.trim() || null : null,
       tieneQuiz,
       puntajeMinimo: puntaje,
