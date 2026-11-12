@@ -1,7 +1,9 @@
 "use client";
 
 import { useState } from "react";
+import { createClient } from "@supabase/supabase-js";
 import { INSTRUCTOR_DEFAULT, PERIODICIDADES, TIPOS_ASIGNACION, TIPOS_CONTENIDO } from "../constants";
+import { EMPRESAS_CAPACITACION, type EmpresaCapacitacion } from "../empresas";
 import type {
   EmpleadoNexo,
   NuevaCapacitacionPayload,
@@ -13,9 +15,13 @@ import { PreguntaBuilder, type PreguntaState } from "./PreguntaBuilder";
 import { FirmaPad } from "./FirmaPad";
 
 interface CapacitacionFormProps {
+  empresa: EmpresaCapacitacion;
   sectores: SectorNexo[];
   empleados: EmpleadoNexo[];
   onCrear: (payload: NuevaCapacitacionPayload) => void;
+  onCrearUrlSubidaPdf: (
+    nombreArchivo: string
+  ) => Promise<{ data: { path: string; token: string } | null; error: string | null }>;
   onCancelar: () => void;
 }
 
@@ -23,7 +29,14 @@ function preguntaVacia(): PreguntaState {
   return { texto: "", opciones: ["", ""], correctaIdx: 0 };
 }
 
-export function CapacitacionForm({ sectores, empleados, onCrear, onCancelar }: CapacitacionFormProps) {
+export function CapacitacionForm({
+  empresa,
+  sectores,
+  empleados,
+  onCrear,
+  onCrearUrlSubidaPdf,
+  onCancelar,
+}: CapacitacionFormProps) {
   const [titulo, setTitulo] = useState("");
   const [descripcion, setDescripcion] = useState("");
   const [tipo, setTipo] = useState<TipoContenido>("texto");
@@ -47,19 +60,35 @@ export function CapacitacionForm({ sectores, empleados, onCrear, onCancelar }: C
   const [instructorMatricula, setInstructorMatricula] = useState<string>(INSTRUCTOR_DEFAULT.matricula);
   const [instructorFirma, setInstructorFirma] = useState<string | null>(null);
   const [firmarDistinto, setFirmarDistinto] = useState(false);
+  const [subiendoPdf, setSubiendoPdf] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   function toggleId(lista: string[], id: string): string[] {
     return lista.includes(id) ? lista.filter((x) => x !== id) : [...lista, id];
   }
 
-  function leerComoDataUrl(file: File): Promise<string> {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => resolve(reader.result as string);
-      reader.onerror = () => reject(reader.error);
-      reader.readAsDataURL(file);
-    });
+  /**
+   * El PDF se sube directo del navegador a Storage con una URL firmada que
+   * pide el server (nunca viaja en base64 por la Server Action): así no hay
+   * límite de tamaño de body de por medio.
+   */
+  async function subirPdf(file: File): Promise<string> {
+    const resultado = await onCrearUrlSubidaPdf(file.name);
+    if (resultado.error || !resultado.data) {
+      throw new Error(resultado.error ?? "No se pudo preparar la subida del PDF.");
+    }
+    const { path, token } = resultado.data;
+    const tenant = EMPRESAS_CAPACITACION[empresa];
+    const cliente = createClient(tenant.nexoRrhhUrl, tenant.nexoRrhhAnonKey);
+    const { error: errorSubida } = await cliente.storage
+      .from("capacitaciones")
+      .uploadToSignedUrl(path, token, file, { contentType: "application/pdf" });
+    if (errorSubida) throw new Error(`No se pudo subir el PDF: ${errorSubida.message}`);
+
+    const {
+      data: { publicUrl },
+    } = cliente.storage.from("capacitaciones").getPublicUrl(path);
+    return publicUrl;
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -74,15 +103,25 @@ export function CapacitacionForm({ sectores, empleados, onCrear, onCancelar }: C
     }
     setError(null);
 
-    const pdfArchivo =
-      tipo === "pdf" && pdfFile ? { nombre: pdfFile.name, dataUrl: await leerComoDataUrl(pdfFile) } : null;
+    let contenidoUrl = tipo === "video" ? videoUrl.trim() || null : null;
+
+    if (tipo === "pdf" && pdfFile) {
+      setSubiendoPdf(true);
+      try {
+        contenidoUrl = await subirPdf(pdfFile);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "No se pudo subir el PDF.");
+        setSubiendoPdf(false);
+        return;
+      }
+      setSubiendoPdf(false);
+    }
 
     onCrear({
       titulo: titulo.trim(),
       descripcion: descripcion.trim(),
       tipo,
-      contenidoUrl: tipo === "video" ? videoUrl.trim() || null : null,
-      pdfArchivo,
+      contenidoUrl,
       contenidoTexto: tipo === "texto" ? texto.trim() || null : null,
       tieneQuiz,
       puntajeMinimo: puntaje,
@@ -433,9 +472,10 @@ export function CapacitacionForm({ sectores, empleados, onCrear, onCancelar }: C
       <div className="flex items-center gap-3">
         <button
           type="submit"
-          className="rounded-md bg-brand-accent px-4 py-2 text-sm font-medium text-white hover:bg-brand-accent/90"
+          disabled={subiendoPdf}
+          className="rounded-md bg-brand-accent px-4 py-2 text-sm font-medium text-white hover:bg-brand-accent/90 disabled:cursor-not-allowed disabled:opacity-50"
         >
-          Crear capacitación
+          {subiendoPdf ? "Subiendo PDF…" : "Crear capacitación"}
         </button>
         <button type="button" onClick={onCancelar} className="text-sm text-slate-400 hover:text-slate-600">
           Cancelar

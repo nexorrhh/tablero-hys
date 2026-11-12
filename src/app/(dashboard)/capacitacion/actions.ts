@@ -36,6 +36,26 @@ export async function crearCapacitacionAction(
   }
 }
 
+/**
+ * El PDF se sube directo del navegador a Storage con esta URL firmada (no
+ * viaja por acá): evita el límite de tamaño de body de los Server Actions.
+ */
+export async function crearUrlSubidaPdfAction(
+  empresa: EmpresaCapacitacion,
+  nombreArchivo: string
+): Promise<{ data: { path: string; token: string } | null; error: string | null }> {
+  try {
+    await exigirAdmin();
+    const data = await new CapacitacionesNexoService(empresa).crearUrlSubidaPdf(nombreArchivo);
+    return { data, error: null };
+  } catch (err) {
+    return {
+      data: null,
+      error: err instanceof Error ? err.message : "Error al preparar la subida del PDF.",
+    };
+  }
+}
+
 export async function toggleActivoAction(
   empresa: EmpresaCapacitacion,
   id: string,

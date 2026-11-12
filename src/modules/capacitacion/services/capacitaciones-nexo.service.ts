@@ -80,27 +80,22 @@ export class CapacitacionesNexoService {
     return (data ?? []) as CapacitacionNexo[];
   }
 
+  /**
+   * URL firmada para que el PDF se suba DIRECTO desde el navegador a Storage
+   * (nunca pasa por una Server Action/función de Vercel): evita el límite de
+   * tamaño de body de los Server Actions, que con un PDF real se supera fácil
+   * en base64. El cliente sube con `uploadToSignedUrl(path, token, file)`.
+   */
+  async crearUrlSubidaPdf(nombreArchivo: string): Promise<{ path: string; token: string }> {
+    const nombreSanitizado = nombreArchivo.replace(/[^a-zA-Z0-9.\-_]/g, "_");
+    const path = `materiales/${Date.now()}_${nombreSanitizado}`;
+    const { data, error } = await this.admin.storage.from("capacitaciones").createSignedUploadUrl(path);
+    if (error) throw error;
+    return { path: data.path, token: data.token };
+  }
+
   async crear(payload: NuevaCapacitacionPayload): Promise<CapacitacionNexo> {
     const admin = this.admin;
-
-    // El PDF viaja como data URL (igual que la firma del instructor) porque un
-    // File del navegador no sobrevive el viaje a la Server Action. Se sube acá
-    // y recién ahí se tiene la URL pública real para guardar en contenido_url.
-    let contenidoUrl = payload.contenidoUrl;
-    if (payload.tipo === "pdf" && payload.pdfArchivo) {
-      const nombreSanitizado = payload.pdfArchivo.nombre.replace(/[^a-zA-Z0-9.\-_]/g, "_");
-      const path = `materiales/${Date.now()}_${nombreSanitizado}`;
-      const base64 = payload.pdfArchivo.dataUrl.split(",")[1] ?? "";
-      const buffer = Buffer.from(base64, "base64");
-      const { error: errorSubidaPdf } = await admin.storage
-        .from("capacitaciones")
-        .upload(path, buffer, { contentType: "application/pdf", upsert: true });
-      if (errorSubidaPdf) throw errorSubidaPdf;
-      const {
-        data: { publicUrl },
-      } = admin.storage.from("capacitaciones").getPublicUrl(path);
-      contenidoUrl = publicUrl;
-    }
 
     const { data: cap, error: errorCap } = await admin
       .from("capacitaciones")
@@ -110,7 +105,7 @@ export class CapacitacionesNexoService {
         titulo: payload.titulo,
         descripcion: payload.descripcion || null,
         tipo: payload.tipo,
-        contenido_url: contenidoUrl,
+        contenido_url: payload.contenidoUrl,
         contenido_texto: payload.contenidoTexto,
         tiene_quiz: payload.tieneQuiz,
         puntaje_minimo: payload.tieneQuiz ? payload.puntajeMinimo : null,

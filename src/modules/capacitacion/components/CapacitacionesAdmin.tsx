@@ -31,6 +31,9 @@ interface CapacitacionesAdminProps {
   ) => Promise<{ data: SeguimientoCapacitacionRow[] | null; error: string | null }>;
   onObtenerAsignaciones: (capId: string) => Promise<{ data: string[] | null; error: string | null }>;
   onGuardarAsignaciones: (capId: string, empleadoIds: string[]) => Promise<{ error: string | null }>;
+  onCrearUrlSubidaPdf: (
+    nombreArchivo: string
+  ) => Promise<{ data: { path: string; token: string } | null; error: string | null }>;
 }
 
 type Panel = { capId: string; tipo: "seguimiento" | "asignar" | "material" };
@@ -55,6 +58,7 @@ export function CapacitacionesAdmin({
   onObtenerSeguimiento,
   onObtenerAsignaciones,
   onGuardarAsignaciones,
+  onCrearUrlSubidaPdf,
 }: CapacitacionesAdminProps) {
   const router = useRouter();
   const [chip, setChip] = useState<"activas" | "archivadas">("activas");
@@ -169,9 +173,11 @@ export function CapacitacionesAdmin({
 
       {mostrarForm ? (
         <CapacitacionForm
+          empresa={empresa}
           sectores={sectores}
           empleados={empleados}
           onCrear={handleCrear}
+          onCrearUrlSubidaPdf={onCrearUrlSubidaPdf}
           onCancelar={() => setMostrarForm(false)}
         />
       ) : null}

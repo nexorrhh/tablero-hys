@@ -14,6 +14,7 @@ import { CapacitacionesAdmin } from "@modules/capacitacion/components/Capacitaci
 import {
   archivarCapacitacionAction,
   crearCapacitacionAction,
+  crearUrlSubidaPdfAction,
   eliminarCapacitacionAction,
   guardarAsignacionesAction,
   obtenerAsignacionesAction,
@@ -96,6 +97,7 @@ export default async function CapacitacionPage({
           onObtenerSeguimiento={obtenerSeguimientoAction.bind(null, empresa)}
           onObtenerAsignaciones={obtenerAsignacionesAction.bind(null, empresa)}
           onGuardarAsignaciones={guardarAsignacionesAction.bind(null, empresa)}
+          onCrearUrlSubidaPdf={crearUrlSubidaPdfAction.bind(null, empresa)}
         />
       </div>
     </>

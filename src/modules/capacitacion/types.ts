@@ -81,8 +81,6 @@ export interface NuevaCapacitacionPayload {
   instructorMatricula: string | null;
   /** PNG en base64 (data URL) del canvas de firma; se sube a Storage al crear. */
   instructorFirma: string | null;
-  /** PDF del material en base64 (data URL); se sube a Storage al crear y reemplaza a contenidoUrl. */
-  pdfArchivo: { nombre: string; dataUrl: string } | null;
 }
 
 /** Progreso de un empleado en una capacitación (tabla `capacitacion_progreso` de Nexo RRHH). */
